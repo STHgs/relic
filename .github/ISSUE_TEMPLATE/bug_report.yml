@@ -1,0 +1,95 @@
+name: Bug 报告
+description: 报告可复现的缺陷（渲染、部署、同步、升级、安装脚本、向导）
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先看 README 的「故障排查」与 [docs/SYNC.md](https://github.com/STHgs/relic/blob/main/docs/SYNC.md)。
+
+        **安全漏洞不要发在这里**，请走 [Security 页面](https://github.com/STHgs/relic/security/advisories/new)（见 [SECURITY.md](https://github.com/STHgs/relic/blob/main/SECURITY.md)）。
+
+  - type: input
+    id: version
+    attributes:
+      label: relic 版本 / 提交
+      description: "`git -C ~/.config/relic rev-parse --short HEAD`、Release tag，或 `cat ~/.config/relic-sync/engine.lock`"
+      placeholder: "v0.0.1-beta / 1210a1b"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows 10 / 11
+        - WSL
+        - Linux
+        - macOS
+        - 其他（请在描述里写明）
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node 版本
+      description: "`node -v`（需要 ≥ 20）"
+      placeholder: "v22.23.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: harness
+    attributes:
+      label: 涉及的 harness
+      options:
+        - DSH
+        - OpenCode
+        - OMO
+        - Codex
+        - 多个 / 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从干净状态开始的完整链条；能给出命令就贴命令
+      placeholder: |
+        1. npm run sync
+        2. ...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为与日志
+      description: 粘贴报错输出；**先删掉路径中的用户名、令牌、私有仓库地址**
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 已阅读 README「故障排查」与 docs/SYNC.md
+          required: true
+        - label: 已确认日志中不含令牌 / 私有仓库地址等敏感信息
+          required: true
+        - label: 这是缺陷而非「我想改规则/加流程」（后者见 CONTRIBUTING）
+          required: false

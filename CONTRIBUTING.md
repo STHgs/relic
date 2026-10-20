@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你对 relic 感兴趣。这是个人向的可移植 agent 治理系统，先读架构再改代码。
+感谢你对 relic 感兴趣。这是个人向的可移植 agent 治理系统，先读架构再改代码。参与讨论与提交即表示同意 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 
 ## 环境
 
@@ -57,4 +57,4 @@ CI 在 `main` push 与 PR 上跑同一条链，见 `.github/workflows/ci.yml`。
 ## 安全
 
 - 治理是**纯提示词 + 自律执行**，不注入平台权限；不要试图在这里加运行时 hook。
-- 发现安全问题请走仓库 Security 页面私下报告，不要开公开 issue。
+- 发现安全问题请按 [SECURITY.md](SECURITY.md) 私下报告，不要开公开 issue。

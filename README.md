@@ -31,7 +31,7 @@ relic 取自《赛博朋克 2077》里承载 Johnny Silverhand 人格印记（en
 
 ### Windows 一键部署（Release，推荐）
 
-1. 打开 [Releases](https://github.com/STHgs/relic/releases)，选最新版本，下载 `relic-setup.zip`；
+1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前唯一 Release 是 **v0.0.1-beta 预发布**，暂无稳定版）；
 2. **解压前**右键 zip → 属性 → 勾选“解除锁定”（否则解压出的脚本会被 SmartScreen 拦）；
 3. 解压，双击 `relic-setup.cmd`；
 4. 脚本自动完成：检查 Node ≥ 20 与 Git（缺失则用 winget 安装）→ clone 引擎到
@@ -132,4 +132,6 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 架构、数据流、不变量
 - [docs/SYNC.md](docs/SYNC.md) — 同步语义、调度器接入、升级失败边界
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 开发环境、测试、PR 约定
+- [SECURITY.md](SECURITY.md) — 漏洞报告渠道、安全边界、已知取舍
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — 行为准则
 - 许可证：[MIT](LICENSE)
