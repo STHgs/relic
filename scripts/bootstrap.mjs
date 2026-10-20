@@ -69,6 +69,9 @@ if (!existsSync(join(REPO, 'node_modules'))) {
 const s = run('npm', ['run', 'sync'], { cwd: REPO, inherit: true });
 if (!s.ok) { console.error('[bootstrap] 首次 sync 失败，排查后重跑 bootstrap'); process.exit(1); }
 
+// 4b. 控制台快捷方式（按需启动，方案 B）
+run('node', [join(REPO, 'scripts', 'console-shortcut.mjs')], { cwd: REPO, inherit: true });
+
 // 5. 调度器
 run('node', [join(REPO, 'scripts', 'install-schedule.mjs')], { cwd: REPO, inherit: true });
 

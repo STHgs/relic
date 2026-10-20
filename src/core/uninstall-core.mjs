@@ -16,6 +16,7 @@ import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { run, userHome } from './exec.mjs';
 import { platformPaths } from './paths.mjs';
+import { shortcutFiles } from './console-service.mjs';
 
 const HOME = userHome();
 const STATE_DIR = join(HOME, '.local', 'state', 'relic');
@@ -156,6 +157,16 @@ export async function deactivate(opts = {}) {
       run('launchctl', ['unload', plist]);
       schedResults.push({ platform: 'launchd', ok: true, detail: 'unloaded' });
     }
+  }
+
+  // 控制台快捷方式（按需启动产物；停服务即移除）
+  const conFiles = shortcutFiles({
+    home: HOME,
+    repo: join(dirname(fileURLToPath(import.meta.url)), '..', '..'),
+  });
+  for (const f of conFiles) {
+    if (!existsSync(f.path)) continue;
+    try { rmSync(f.path, { force: true }); } catch { /* 忽略 */ }
   }
 
   return { ...inj, scheduler: schedResults };

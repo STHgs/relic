@@ -24,6 +24,8 @@
     "upgrade": "node scripts/upgrade.mjs",
     "cleanup-backups": "node scripts/cleanup-backups.mjs",
     "wizard": "node scripts/wizard.mjs",
+    "console": "node scripts/console.mjs",
+    "console:shortcut": "node scripts/console-shortcut.mjs",
     "uninstall": "node scripts/uninstall.mjs"
   },
   "dependencies": {

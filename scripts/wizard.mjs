@@ -204,9 +204,12 @@ async function* deployPipeline(config) {
   const schedR = run('node', [join(REPO, 'scripts', 'install-schedule.mjs')]);
   yield { step: 4, status: schedR.ok ? 'done' : 'warn', message: schedR.ok ? '调度器已安装' : '调度器安装失败（可手动装）' };
 
+  // Step 4b: 控制台快捷方式（方案 B 按需启动；失败不阻塞部署）
+  const shortcutR = run('node', [join(REPO, 'scripts', 'console-shortcut.mjs')]);
+
   // ── Step 5: 验证 ──
   yield { step: 5, status: 'active', message: '验证部署...' };
-  const report = { platforms: [], scheduler: schedR.ok };
+  const report = { platforms: [], scheduler: schedR.ok, consoleShortcut: shortcutR.ok };
   const deployedPaths = [
     { name: 'DSH', path: join(HOME, '.dsh', 'AGENTS.md') },
     { name: 'OpenCode', path: join(HOME, '.config', 'opencode', 'AGENTS.md') },

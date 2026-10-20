@@ -57,7 +57,7 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 
 | 目的 | 命令 |
 |---|---|
-| 管理台（状态/恢复/升级/卸载） | `npm run wizard` |
+| 控制台（状态/恢复/升级/卸载，按需启动） | `npm run console` 或双击「relic 控制台」快捷方式；关闭窗口即停止（治理与 5 分钟同步不受影响） |
 | 立即同步，不等 5 分钟 | `npm run sync` |
 | 升级引擎 | `npm run upgrade -- --tag <tag>`（或 `--latest`） |
 | 去治理（保留一切，可恢复） | `npm run uninstall -- --level uninject` |
@@ -92,6 +92,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 
 - **改规则/人设**：编辑 `~/.config/relic-sync/` 下内容 → commit + push → 5 分钟全域生效。
 - **急用**：在引擎 clone 跑 `npm run sync`。
+- **控制台**：`npm run console` 按需启动（已在运行则只开浏览器）；关窗口即停止，治理与定时同步照常。
 - **加规则/流程**：直接说需求，触发 `add-permission` / `add-workflow` 对话流程。
 - **固化偏好**：说“记住……”，agent 会申请写入 `personas.directives`（全域生效）。
 
