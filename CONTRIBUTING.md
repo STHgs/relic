@@ -8,8 +8,8 @@
 - 依赖仅 `ajv` 与 `yaml`，`npm ci` 即可
 
 ```bash
-git clone https://github.com/STHgs/relic-source.git
-cd relic-source
+git clone https://github.com/STHgs/relic.git
+cd relic
 npm ci
 npm test
 ```

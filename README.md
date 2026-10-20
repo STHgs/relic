@@ -10,7 +10,7 @@ DSH、OpenCode/OMO、Codex 的全局指令文件。改一次，5 分钟内全部
 
 | 层 | 是什么 | 在哪 |
 |---|---|---|
-| 引擎 `relic-source` | 渲染器、骨架门禁、适配器、同步/升级 | 本仓库（GitHub，CI 门禁） |
+| 引擎 `relic` | 渲染器、骨架门禁、适配器、同步/升级 | 本仓库（GitHub，CI 门禁） |
 | 内容 `relic-sync` | 你的规则模块、人设、工作流（私有） | 每身份一库，默认 Gitee |
 | 产物 | 各平台 `AGENTS.md` | 本机各 harness 配置目录 |
 
@@ -24,16 +24,16 @@ DSH、OpenCode/OMO、Codex 的全局指令文件。改一次，5 分钟内全部
 前置：Node ≥ 20、Git。
 
 ```bash
-git clone https://github.com/STHgs/relic-source.git
-cd relic-source
+git clone https://github.com/STHgs/relic.git
+cd relic
 ./install.sh          # Linux / WSL / macOS：装依赖 + 打开浏览器向导
 ```
 
 Windows 双击 `relic-setup.cmd`（自动装 Node/Git 并启动同一向导），或手动：
 
 ```powershell
-git clone https://github.com/STHgs/relic-source.git
-cd relic-source; npm install; npm run wizard
+git clone https://github.com/STHgs/relic.git
+cd relic; npm install; npm run wizard
 ```
 
 向导完成：环境检查 → 选身份（新建 / 接入已有）→ 粘贴 Gitee 令牌（新建时需要，勾选 projects）

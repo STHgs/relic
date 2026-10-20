@@ -59,19 +59,19 @@ echo $git = Get-Command git -ErrorAction SilentlyContinue
 echo if ^(-not $git^) ^{ Write-Host '  [ERROR] Git still unavailable.' -ForegroundColor Red; exit 1 ^}
 echo Write-Host '  [2/4] Git OK' -ForegroundColor Green
 echo.
-echo Write-Host '  [3/4] Downloading relic-source...'
-echo $dest = Join-Path $env:USERPROFILE 'relic-source'
+echo Write-Host '  [3/4] Downloading relic...'
+echo $dest = Join-Path $env:USERPROFILE 'relic'
 echo if ^(Test-Path ^(Join-Path $dest 'package.json'^)^) ^{
 echo     Write-Host '  [3/4] Already exists, skip download' -ForegroundColor Green
 echo ^} else ^{
-echo     git clone https://github.com/STHgs/relic-source.git $dest 2^>$null
+echo     git clone https://github.com/STHgs/relic.git $dest 2^>$null
 echo     if ^($LASTEXITCODE -ne 0^) ^{
 echo         Write-Host '  GitHub failed, trying Gitee mirror...' -ForegroundColor Yellow
-echo         git clone https://gitee.com/sthgs/relic-source.git $dest
+echo         git clone https://gitee.com/sthgs/relic.git $dest
 echo     ^}
 echo     if ^($LASTEXITCODE -ne 0^) ^{ Write-Host '  [ERROR] Download failed. Check network.' -ForegroundColor Red; exit 1 ^}
 echo ^}
-echo Write-Host '  [3/4] relic-source ready' -ForegroundColor Green
+echo Write-Host '  [3/4] relic ready' -ForegroundColor Green
 echo.
 echo Write-Host '  [4/4] Launching wizard...' -ForegroundColor Cyan
 echo Set-Location $dest

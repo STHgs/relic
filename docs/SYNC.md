@@ -99,7 +99,7 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && 
 - **同步库（relic-sync）默认 Gitee**：init-sync 走 Gitee API v5 建库（`--provider github` 切回 gh CLI 流）
 - 认证差异：Gitee = 私人令牌（设置→安全设置→私人令牌，勾选 projects，粘贴一次入 credential store）；GitHub = gh 设备码
 - 存量部署不受影响：sync 只认 origin，已迁移的 clone 零改动
-- 引擎库（relic-source）留 GitHub——CI 门禁依赖 GitHub Actions
+- 引擎库（relic）留 GitHub——CI 门禁依赖 GitHub Actions
 - 已有身份多平台接入不变：clone URL 填 Gitee 地址即可
 
 ## harness 位置四层解析链（2026-09-23，自定义安装支持）
@@ -144,10 +144,10 @@ permission patterns 属用户主权区，零审查。
 
 ## 拆分后架构（2026-09-15，v7）
 
-- 引擎：`STHgs/relic-source`（静态权威源；本机 `~/.config/relic`；升级 `npm run upgrade -- --tag <t>`）
+- 引擎：`STHgs/relic`（静态权威源；本机 `~/.config/relic`；升级 `npm run upgrade -- --tag <t>`）
 - 内容：`<your-id>/relic-sync`（本身份；本机 `~/.config/relic-sync`；改规则在此 commit+push）
 - 发现链：`--content` 参数 > `RELIC_CONTENT_REPO` env > 引擎 `relic.config.json` > `~/.config/relic-sync`
-- 新机器接入：`git clone relic-source → npm run bootstrap`（自动 init-sync 或 clone 已有身份库）
+- 新机器接入：`git clone relic → npm run bootstrap`（自动 init-sync 或 clone 已有身份库）
 
 ### 受控升级与失败恢复（2026-10-20）
 
