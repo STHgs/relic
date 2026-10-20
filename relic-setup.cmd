@@ -64,10 +64,10 @@ echo $dest = Join-Path $env:USERPROFILE 'relic-source'
 echo if ^(Test-Path ^(Join-Path $dest 'package.json'^)^) ^{
 echo     Write-Host '  [3/4] Already exists, skip download' -ForegroundColor Green
 echo ^} else ^{
-echo     git clone https://gitee.com/sthgs/relic-source.git $dest 2^>$null
+echo     git clone https://github.com/STHgs/relic-source.git $dest 2^>$null
 echo     if ^($LASTEXITCODE -ne 0^) ^{
-echo         Write-Host '  Gitee failed, trying GitHub...' -ForegroundColor Yellow
-echo         git clone https://github.com/STHgs/relic-source.git $dest
+echo         Write-Host '  GitHub failed, trying Gitee mirror...' -ForegroundColor Yellow
+echo         git clone https://gitee.com/sthgs/relic-source.git $dest
 echo     ^}
 echo     if ^($LASTEXITCODE -ne 0^) ^{ Write-Host '  [ERROR] Download failed. Check network.' -ForegroundColor Red; exit 1 ^}
 echo ^}
