@@ -1,9 +1,24 @@
 {
   "name": "relic",
   "version": "0.2.0",
+  "private": true,
   "type": "module",
   "description": "Portable personal agent-configuration system (rules/workflows/persona).",
   "license": "MIT",
+  "author": "STHgs",
+  "homepage": "https://github.com/STHgs/relic#readme",
+  "bugs": {
+    "url": "https://github.com/STHgs/relic/issues"
+  },
+  "keywords": [
+    "agents-md",
+    "ai-agents",
+    "agent-governance",
+    "dsh",
+    "opencode",
+    "codex",
+    "portable-config"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/STHgs/relic.git"
