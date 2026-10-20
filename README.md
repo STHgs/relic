@@ -35,11 +35,13 @@ cd relic
 ./install.sh          # Linux / WSL / macOS：装依赖 + 打开浏览器向导
 ```
 
-Windows 双击 `relic-setup.cmd`（自动装 Node/Git 并启动同一向导），或手动：
+Windows：从 [Releases](https://github.com/STHgs/relic/releases/latest) 下载 `relic-setup.zip`，
+**先右键 zip → 属性 → 勾选“解除锁定”**，再解压、双击 `relic-setup.cmd`（自动装 Node/Git、
+clone 引擎并启动同一向导）。或手动：
 
 ```powershell
 git clone https://github.com/STHgs/relic.git
-cd relic; npm install; npm run wizard
+cd "$env:USERPROFILE\relic"; npm install; npm run wizard
 ```
 
 向导完成：环境检查 → 选身份（新建 / 接入已有）→ 粘贴 Gitee 令牌（新建时需要，勾选 projects）

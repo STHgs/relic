@@ -18,6 +18,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: node scripts/tier4-skeleton.mjs
+      - name: PowerShell 语法检查（setup.ps1）
+        run: |
+          if ! command -v pwsh >/dev/null 2>&1; then echo 'pwsh 不可用，跳过'; exit 0; fi
+          pwsh -NoProfile -Command '$null = [scriptblock]::Create((Get-Content -Raw ./scripts/setup.ps1)); Write-Host "ps1 syntax OK"'
       - name: 引擎库防混入断言（内容文件永不出现在 source 库）
         run: |
           test ! -e policies.yaml || (echo '::error::policies.yaml 不得出现在引擎库（内容属同步库）' && exit 1)
