@@ -35,7 +35,7 @@ cd relic
 ./install.sh          # Linux / WSL / macOS：装依赖 + 打开浏览器向导
 ```
 
-Windows：从 [Releases](https://github.com/STHgs/relic/releases/latest) 下载 `relic-setup.zip`，
+Windows：从 [Releases](https://github.com/STHgs/relic/releases) 下载 `relic-setup.zip`，
 **先右键 zip → 属性 → 勾选“解除锁定”**，再解压、双击 `relic-setup.cmd`（自动装 Node/Git、
 clone 引擎并启动同一向导）。或手动：
 
