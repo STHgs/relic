@@ -1,0 +1,35 @@
+# tests/fixtures/manifest.yaml — manifest fixture for direction 3 (direction3-plan §7)
+# Mirrors the policies-good.yaml split: 3 modules whose merge == policies-good.yaml render.
+# Used by round-trip test RT1: render(loadProfile(manifest, default)) === render(loadPolicies(policies-good.yaml)).
+meta:
+  version: 2
+  description: Manifest fixture for modular profile loading tests
+  evaluation: test fixture
+permissions: []       # all rules live in modules
+workflows: []         # all workflows live in modules
+risk_levels:
+  low: []
+  medium: []
+  high: []
+personas: []
+modules:
+  - id: sudo-safety
+    name: Sudo Safety
+    version: 1.0.0
+  - id: web-safety
+    name: Web Safety
+    version: 1.0.0
+  - id: pdf-handling
+    name: PDF Handling
+    version: 1.0.0
+profiles:
+  - id: work
+    name: Work profile
+    modules: [sudo-safety, web-safety]
+    default: true
+  - id: personal
+    name: Personal profile
+    modules: [pdf-handling]
+  - id: full
+    name: Full profile
+    modules: all

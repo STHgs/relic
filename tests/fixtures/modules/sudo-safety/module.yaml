@@ -1,0 +1,20 @@
+# tests/fixtures/modules/sudo-safety/module.yaml — fragment (no meta; manifest supplies it)
+id: sudo-safety
+permissions:
+  - id: sudo-ask
+    intent: Require confirmation before privilege escalation
+    applies_to: [primary, deep]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "sudo *"
+        action: ask
+    action: ask
+    alternatives:
+      - Run without sudo when no privilege needed
+workflows: []
+risk_levels:
+  low: []
+  medium: []
+  high:
+    - mount or umount disks

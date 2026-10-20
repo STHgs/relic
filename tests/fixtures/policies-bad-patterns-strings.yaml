@@ -1,0 +1,14 @@
+# INVALID fixture: patterns emitted as bare YAML strings (proves bug #1 rejection).
+# Asserts V2: validator rejects with error mentioning patterns / must be object.
+meta:
+  version: 2
+  description: INVALID fixture - patterns as bare strings (proves bug #1 rejection)
+permissions:
+  - id: sudo-ask
+    intent: Require confirmation before privilege escalation
+    applies_to: [primary]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - "sudo *"   # <- bare string; schema requires { pattern: "..." } object
+    action: ask

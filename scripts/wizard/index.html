@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>relic 控制台</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#FFB000">
+<style>
+@font-face{font-family:'VT323';src:url('fonts/VT323.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+:root{
+  --bg:#1A1A1A;         --card:#202020;       --border:#6B4A1A;
+  --text:#FFC866;       --muted:#A87838;      --accent:#FFB000;
+  --accent-bg:rgba(255,176,0,.12);            --ok:#7ab648;
+  --err:#e04430;        --warn:#c4841c;       --radius:6px;
+  --glow:0 0 6px rgba(255,176,0,.4);
+  --glow-strong:0 0 2px currentColor,0 0 8px rgba(255,176,0,.55),0 0 16px rgba(255,176,0,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'VT323',ui-monospace,"Cascadia Code",Consolas,"PingFang SC","Microsoft YaHei",monospace}
+body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center;align-items:center;font-size:19px;line-height:1.75}
+
+/* === CRT 效果 === */
+body::before{content:"";position:fixed;inset:0;z-index:9997;pointer-events:none;background:radial-gradient(ellipse 120% 100% at center,transparent 50%,rgba(0,0,0,.6) 100%)}
+body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;background:
+    repeating-linear-gradient(to bottom,
+      rgba(255,176,0,.03) 0px,   rgba(255,176,0,.03) 1px,   /* 亮线（琥珀微光）*/
+      rgba(0,0,0,.35)   2px,     rgba(0,0,0,.35)   4px);    /* 暗线（CRT 缝隙）*/
+    mix-blend-mode:multiply}
+
+@keyframes crt-flicker{0%,100%{opacity:1}93%{opacity:.97}95%{opacity:1}97%{opacity:.99}}
+.wizard{animation:crt-flicker 6s infinite}
+
+/* === 向导容器 === */
+.wizard{width:680px;max-width:95vw;background:var(--card);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;z-index:1;box-shadow:0 0 40px rgba(255,176,0,.12),0 0 8px rgba(255,176,0,.25)}
+.header{padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:26px;font-weight:600;color:var(--accent);letter-spacing:2px;text-shadow:var(--glow-strong)}
+.step-ind{display:flex;gap:6px;align-items:center}
+.step-dot{width:24px;height:4px;border-radius:2px;background:var(--border);transition:.3s}
+.step-dot.active{background:var(--accent);box-shadow:var(--glow)}
+.step-dot.done{background:var(--ok)}
+.step-label{font-size:15px;color:var(--muted);margin-left:4px;letter-spacing:.08em;text-transform:uppercase}
+.body{padding:24px;min-height:380px}
+
+/* === 环境检查 === */
+.env-row{display:flex;align-items:center;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;transition:.2s}
+.env-row:hover{border-color:var(--accent);box-shadow:0 0 8px rgba(255,176,0,.08)}
+.env-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;margin-right:12px;flex-shrink:0}
+.env-icon.ok{background:rgba(122,182,72,.15);color:var(--ok)}
+.env-icon.err{background:rgba(224,68,48,.15);color:var(--err)}
+.env-icon.opt{background:rgba(140,102,40,.15);color:var(--muted)}
+.env-name{font-size:18px;font-weight:500;width:140px}
+.env-ver{font-size:16px;color:var(--muted);flex:1}
+.btn-install{padding:4px 14px;border:1px solid var(--accent);border-radius:4px;background:var(--accent-bg);color:var(--accent);font-size:16px;cursor:pointer;transition:.2s;text-shadow:var(--glow)}
+.btn-install:hover{background:rgba(255,176,0,.25);box-shadow:var(--glow)}
+.btn-install:disabled{opacity:.4;cursor:not-allowed}
+
+/* === 身份选择 === */
+.radio-card{display:block;padding:16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:.2s}
+.radio-card:hover{border-color:var(--accent);box-shadow:0 0 8px rgba(255,176,0,.08)}
+.radio-card.selected{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 12px rgba(255,176,0,.1)}
+.radio-card input{display:none}
+.radio-title{font-size:20px;font-weight:600;display:flex;align-items:center;gap:8px}
+.radio-desc{font-size:16px;color:var(--muted);margin-top:6px;margin-left:26px}
+.radio-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s}
+.radio-card.selected .radio-check{border-color:var(--accent);box-shadow:var(--glow)}
+.radio-card.selected .radio-check::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.url-input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;margin-top:8px;display:none}
+.url-input.show{display:block}
+.url-input:focus{outline:none;border-color:var(--accent);box-shadow:var(--glow)}
+.radio-tag{font-size:15px;color:var(--accent);margin-left:auto;text-shadow:var(--glow)}
+
+/* === 令牌 === */
+.steps-hint{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.steps-hint li{font-size:17px;color:var(--muted);margin:4px 0 4px 16px}
+.steps-hint a{color:var(--accent);text-decoration:none;text-shadow:var(--glow)}
+.token-input{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:18px;letter-spacing:1px}
+.token-input:focus{outline:none;border-color:var(--accent);box-shadow:var(--glow)}
+.token-status{font-size:16px;margin-top:6px;min-height:16px}
+.token-status.ok{color:var(--ok)}
+.token-status.err{color:var(--err)}
+
+/* === 进度 === */
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:20px}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .5s ease;box-shadow:var(--glow)}
+.task-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:18px}
+.task-icon{width:18px;display:flex;justify-content:center;flex-shrink:0}
+.task-icon.done{color:var(--ok)}
+.task-icon.active{color:var(--accent)}
+.task-icon.pending{color:var(--muted)}
+.task-icon.active::after{content:'⟳';animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.task-icon.warn{color:var(--warn)}
+.log-box{margin-top:16px;background:#000;border:1px solid var(--border);border-radius:4px;padding:12px;font-size:16px;max-height:120px;overflow-y:auto}
+.log-line{padding:1px 0}
+.log-line.ok{color:var(--ok)}
+.log-line.err{color:var(--err)}
+.log-line .prefix{color:var(--accent);text-shadow:var(--glow)}
+.cursor-blink{display:inline-block;width:8px;height:15px;background:var(--accent);animation:blink 1s step-end infinite;vertical-align:middle;box-shadow:var(--glow)}
+@keyframes blink{50%{opacity:0}}
+
+/* === 完成报告 === */
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.report-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:17px}
+.report-item .check{color:var(--ok)}
+.tips-box{margin-top:16px;padding:14px;background:var(--accent-bg);border-left:2px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0}
+.tips-title{font-size:16px;font-weight:600;color:var(--accent);margin-bottom:6px;text-shadow:var(--glow)}
+.tips-content{font-size:16px;color:var(--muted);line-height:1.7}
+.tips-content code{background:var(--bg);padding:2px 6px;border-radius:3px;font-size:15px;color:var(--text)}
+
+/* === Tab === */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{padding:10px 20px;font-size:17px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);text-shadow:var(--glow)}
+.tab.disabled{opacity:.4;cursor:not-allowed}
+
+/* === 版本行 === */
+.version-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px}
+.version-label{font-size:16px;color:var(--muted)}
+.version-value{font-size:18px;font-weight:600}
+.version-badge{font-size:15px;padding:2px 8px;border-radius:3px;background:rgba(122,182,72,.15);color:var(--ok)}
+
+/* === 按钮 === */
+.footer{display:flex;justify-content:space-between;padding:16px 24px;border-top:1px solid var(--border)}
+.btn{padding:10px 22px;border:none;border-radius:var(--radius);font-size:18px;font-weight:500;cursor:pointer;transition:.2s;font-family:inherit}
+.btn-primary{background:var(--accent);color:#000;text-shadow:none;box-shadow:0 0 8px rgba(255,176,0,.3)}
+.btn-primary:hover{box-shadow:0 0 16px rgba(255,176,0,.5);filter:brightness(1.1)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-secondary:hover{border-color:var(--text);color:var(--text)}
+.btn-success{background:var(--ok);color:#000}
+.btn-danger{background:var(--err);color:#fff;box-shadow:0 0 8px rgba(224,68,48,.3)}
+.btn-danger:hover{box-shadow:0 0 16px rgba(224,68,48,.5)}
+
+/* === 错误 === */
+.error-banner{padding:10px 14px;background:rgba(224,68,48,.1);border:1px solid var(--err);border-radius:var(--radius);margin-bottom:12px;font-size:16px;color:var(--err);display:none}
+.error-banner.show{display:block}
+.hidden{display:none!important}
+
+/* === ① 标题栏 === */
+.titlebar{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);background:rgba(255,176,0,.03)}
+.tb-dots{display:flex;gap:7px}
+.tb-dot{width:13px;height:13px;border-radius:50%;box-shadow:0 0 4px rgba(255,176,0,.15)}
+.tb-dot.r{background:#e04430;box-shadow:0 0 6px rgba(224,68,48,.5)}
+.tb-dot.y{background:#c4841c;box-shadow:0 0 6px rgba(196,132,28,.5)}
+.tb-dot.g{background:#7ab648;box-shadow:0 0 6px rgba(122,182,72,.5)}
+.tb-title{color:var(--muted);font-size:17px;margin-left:8px;letter-spacing:.05em}
+.tb-blink{color:var(--accent);font-size:18px;animation:blink 1.1s step-end infinite;text-shadow:var(--glow)}
+
+/* === 状态 Tab 标签 === */
+.eyebrow-label{font-size:15px;color:var(--accent);letter-spacing:.1em;margin-bottom:8px;text-shadow:var(--glow)}
+
+/* === ③ 状态栏 === */
+.statusbar{display:flex;gap:18px;padding:8px 18px;border-top:1px solid var(--border);font-size:15px;color:var(--muted);letter-spacing:.05em}
+.statusbar .rec-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--err);margin-right:4px;animation:rec-pulse 1.6s ease-in-out infinite;vertical-align:middle}
+@keyframes rec-pulse{0%,100%{opacity:1;box-shadow:0 0 6px rgba(224,68,48,.6)}50%{opacity:.3;box-shadow:0 0 2px rgba(224,68,48,.2)}}
+
+/* === ⑥ 噪点颗粒（SVG feTurbulence） === */
+.noise-layer{position:fixed;inset:0;z-index:9995;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:noise-shift .35s steps(4) infinite}
+@keyframes noise-shift{0%{background-position:0 0}25%{background-position:-60px 40px}50%{background-position:40px -60px}75%{background-position:-40px -40px}100%{background-position:0 0}}
+
+/* === 扫频三改：双光带 + 非线性速度 + 亮度脉动 === */
+.scan-band{position:fixed;left:0;right:0;height:190px;z-index:9996;pointer-events:none;background:linear-gradient(to bottom,transparent,rgba(255,176,0,.13) 50%,transparent)}
+.scan-band.a{animation:crt-scan-a 8s cubic-bezier(.4,0,.6,1) infinite}
+.scan-band.b{height:130px;opacity:.5;animation:crt-scan-b 13s cubic-bezier(.35,.1,.65,.9) infinite}
+@keyframes crt-scan-a{
+  0%{transform:translateY(-190px);opacity:0}
+  8%{opacity:.7}
+  50%{transform:translateY(50vh);opacity:1;filter:brightness(1.3)}
+  92%{opacity:.6}
+  100%{transform:translateY(100vh);opacity:0}
+}
+@keyframes crt-scan-b{
+  0%{transform:translateY(100vh);opacity:0}
+  15%{opacity:.4}
+  50%{transform:translateY(30vh);opacity:.8}
+  85%{opacity:.3}
+  100%{transform:translateY(-130px);opacity:0}
+}
+</style>
+</head>
+<body>
+
+<div class="noise-layer"></div>
+<div class="scan-band a"></div>
+<div class="scan-band b"></div>
+<div class="wizard">
+  <div class="titlebar">
+    <div class="tb-dots"><div class="tb-dot r"></div><div class="tb-dot y"></div><div class="tb-dot g"></div></div>
+    <span class="tb-title">relic@install:~$</span>
+    <span class="tb-blink">▊</span>
+  </div>
+  <div class="header">
+    <div class="logo">◇ relic</div>
+    <div class="step-ind" id="stepInd"></div>
+  </div>
+
+  <div class="body">
+
+    <!-- Step 1: 环境检查 -->
+    <div class="screen" id="scr-env">
+      <h2 style="font-size:16px; margin-bottom:16px">环境检查</h2>
+      <div class="error-banner" id="envErr"></div>
+      <div id="envList"></div>
+    </div>
+
+    <!-- Step 2: 身份选择 -->
+    <div class="screen hidden" id="scr-identity">
+      <h2 style="font-size:16px; margin-bottom:16px">身份选择</h2>
+      <label class="radio-card selected" id="rc-gitee" onclick="selectMode('gitee')">
+        <div class="radio-title"><div class="radio-check"></div>新建身份（Gitee）<span class="radio-tag">推荐</span></div>
+        <div class="radio-desc">自动创建 Gitee 私有同步库</div>
+      </label>
+      <label class="radio-card" id="rc-existing" onclick="selectMode('existing')">
+        <div class="radio-title"><div class="radio-check"></div>接入已有身份</div>
+        <div class="radio-desc">输入同步库 URL</div>
+        <input class="url-input" type="text" id="urlInput" placeholder="https://gitee.com/xxx/relic-sync.git">
+      </label>
+      <label class="radio-card" id="rc-github" onclick="selectMode('github')">
+        <div class="radio-title"><div class="radio-check"></div>新建身份（GitHub）</div>
+        <div class="radio-desc">需要 gh CLI 设备码授权</div>
+      </label>
+    </div>
+
+    <!-- Step 3: 令牌 -->
+    <div class="screen hidden" id="scr-token">
+      <h2 style="font-size:16px; margin-bottom:16px">Gitee 私人令牌</h2>
+      <div class="steps-hint">
+        <li>打开 <a href="https://gitee.com/profile/personal_access_tokens" target="_blank">gitee.com → 设置 → 私人令牌</a></li>
+        <li>生成新令牌，勾选 <b>projects</b> 权限</li>
+        <li>生成后<b>立即复制</b>（只显示一次），粘贴到下方</li>
+      </div>
+      <input class="token-input" type="password" id="tokenInput" placeholder="粘贴令牌...">
+      <div class="token-status" id="tokenStat"></div>
+    </div>
+
+    <!-- Step 4: 部署进度 -->
+    <div class="screen hidden" id="scr-deploy">
+      <h2 style="font-size:16px; margin-bottom:16px">部署中</h2>
+      <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+      <div id="taskList"></div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+
+    <!-- Step 5: 完成 -->
+    <div class="screen hidden" id="scr-done">
+      <h2 style="font-size:16px; margin-bottom:4px">🎉 安装完成</h2>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:16px">relic 已在以下平台部署治理</p>
+      <div class="report-grid" id="reportGrid"></div>
+      <div class="tips-box">
+        <div class="tips-title">如何修改规则 / 人设</div>
+        <div class="tips-content">
+          编辑 <code>~/.config/relic-sync/policies.yaml</code><br>
+          提交推送后 <b>5 分钟内</b> 所有平台自动生效
+        </div>
+      </div>
+
+      <div class="tips-box" style="background:rgba(255,176,0,.08); border-left:2px solid var(--accent)">
+        <div class="tips-title">📍 安装控制台到桌面</div>
+        <div class="tips-content">
+          独立窗口 + 桌面图标，不再占用浏览器标签页<br>
+          随时回来管理（状态 / 升级 / 卸载 / 恢复）
+          <div style="margin-top:8px">
+            <button class="btn btn-primary" id="btnInstallPWA" onclick="installPWA()" style="display:none">安装 relic 控制台</button>
+            <span id="pwaHint" style="font-size:12px;color:var(--muted)">浏览器地址栏右侧的安装图标 ↗ 也可以</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 升级 -->
+    <div class="screen hidden" id="scr-upgrade">
+      <div class="tabs">
+        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab active" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
+      </div>
+      <div class="version-row">
+        <div><div class="version-label">当前版本</div><div class="version-value" id="curVer">...</div></div>
+        <div><div class="version-label">最新版本</div><div class="version-value" id="newVer">...</div></div>
+      </div>
+      <div id="upgradeTasks" style="margin:12px 0"></div>
+      <div class="progress-bar"><div class="progress-fill" id="upgFill" style="width:0%"></div></div>
+      <div class="log-box" id="upgLog" style="max-height:80px"></div>
+    </div>
+
+    <!-- 恢复治理 -->
+    <div class="screen hidden" id="scr-restore">
+      <div class="tabs">
+        <div class="tab active" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
+      </div>
+      <h2 style="font-size:16px; margin-bottom:8px">恢复治理</h2>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:16px">从去治理前的备份恢复 AGENTS.md</p>
+      <div id="restoreBackupList" style="margin-bottom:16px"></div>
+      <div id="restoreProgress" class="hidden">
+        <div class="log-box" id="restoreLog" style="max-height:100px"></div>
+      </div>
+    </div>
+
+    <!-- 卸载 -->
+    <div class="screen hidden" id="scr-uninstall">
+      <div class="tabs">
+        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab active" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
+      </div>
+      <h2 style="font-size:16px; margin-bottom:8px">当前部署</h2>
+      <div id="uninstallDeployedList" style="margin-bottom:16px"></div>
+
+      <h2 style="font-size:16px; margin-bottom:8px">卸载级别</h2>
+      <label class="radio-card selected" id="uc-uninject" onclick="selectUninstallLevel('uninject')">
+        <div class="radio-title"><div class="radio-check"></div>去治理</div>
+        <div class="radio-desc">移除部署位 AGENTS.md + 备份。保留一切——秒级恢复</div>
+      </label>
+      <label class="radio-card" id="uc-deactivate" onclick="selectUninstallLevel('deactivate')">
+        <div class="radio-title"><div class="radio-check"></div>停服务</div>
+        <div class="radio-desc">上述 + 停用调度器（可重新启用）</div>
+      </label>
+      <label class="radio-card" id="uc-full" onclick="selectUninstallLevel('full')">
+        <div class="radio-title"><div class="radio-check"></div>完全卸载</div>
+        <div class="radio-desc">⚠️ 上述 + 删引擎/内容库/habits——身份数据将丢失（会先 push）</div>
+      </label>
+
+      <div id="harnessSelect" style="margin-top:12px">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:8px">选择要移除的 harness（默认全部）：</div>
+        <div id="harnessCheckboxes" style="display:flex; flex-direction:column; gap:6px"></div>
+      </div>
+
+      <div id="fullConfirm" class="hidden" style="margin-top:12px; padding:12px; background:rgba(248,81,73,.1); border:1px solid var(--err); border-radius:var(--radius)">
+        <div style="font-size:13px; color:var(--err); margin-bottom:8px">⚠️ 完全卸载将删除你的全部规则和人设</div>
+        <input type="text" id="fullConfirmInput" placeholder="输入 YES 确认" style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text)">
+      </div>
+
+      <div id="uninstallProgress" class="hidden" style="margin-top:16px">
+        <div class="progress-bar"><div class="progress-fill" id="uninstFill" style="width:0%"></div></div>
+        <div class="log-box" id="uninstLog" style="max-height:100px"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="statusbar">
+    <span>[relic v2.3]</span>
+    <span>[amber-CRT]</span>
+    <span>[<span class="rec-dot"></span>REC]</span>
+    <span id="sbScreen">[env]</span>
+  </div>
+
+  <div class="footer">
+    <button class="btn btn-secondary" id="btnPrev" onclick="nav(-1)">← 上一步</button>
+    <div style="display:flex; gap:8px">
+      <button class="btn btn-primary" id="btnNext" onclick="nav(1)">下一步 →</button>
+      <button class="btn btn-success hidden" id="btnDone" onclick="window.close()">完成 🎉</button>
+      <button class="btn btn-primary hidden" id="btnUpgrade" onclick="startUpgrade()">开始升级</button>
+      <button class="btn btn-danger hidden" id="btnUninstall" onclick="startUninstall()">执行卸载</button>
+      <button class="btn btn-primary hidden" id="btnRestore" onclick="startRestore()">恢复治理</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── 状态 ───────────────────────────────────────────────────────────
+let step = 1;
+let currentScreen = 'env';
+let identityMode = 'gitee';
+let giteeToken = '';
+let deployConfig = null;
+let alreadyDeployed = false;
+const totalSteps = 5;
+const screens = ['env','identity','token','deploy','done'];
+const stepNames = ['环境检查','身份选择','令牌','部署中','安装完成'];
+
+// ─── 初始化 ──────────────────────────────────────────────────────
+async function init() {
+  const r = await fetch('/api/check');
+  const data = await r.json();
+  alreadyDeployed = data.deployed;
+
+  // 渲染环境检查
+  const list = document.getElementById('envList');
+  list.innerHTML = '';
+  let allOk = true;
+  for (const c of data.checks) {
+    if (!c.ok && !c.optional) allOk = false;
+    const row = document.createElement('div');
+    row.className = 'env-row';
+    row.innerHTML = `
+      <div class="env-icon ${c.ok ? 'ok' : c.optional ? 'opt' : 'err'}">${c.ok ? '✓' : c.optional ? '—' : '✗'}</div>
+      <div class="env-name">${c.name}</div>
+      <div class="env-ver">${c.version || c.hint || ''}</div>
+    `;
+    list.appendChild(row);
+  }
+
+  // 已部署 → 直接跳到升级界面
+  if (alreadyDeployed) {
+    showScreen('upgrade');
+    loadVersion();
+    return;
+  }
+  showScreen('env');
+}
+
+// ─── 画面配置（声明式——每个画面自带按钮/指示器/回调） ────────────────
+const SCREENS = {
+  env:       { stepper: true,  buttons: ['prev','next'], stepNum: 1 },
+  identity:  { stepper: true,  buttons: ['prev','next'], stepNum: 2 },
+  token:     { stepper: true,  buttons: ['prev','next'], stepNum: 3 },
+  deploy:    { stepper: true,  buttons: [],               stepNum: 4 },
+  done:      { stepper: true,  buttons: ['done'],         stepNum: 5 },
+  upgrade:   { stepper: false, buttons: ['upgrade'],      label: '版本升级' },
+  uninstall: { stepper: false, buttons: ['uninstall'],   label: '卸载',  onLoad: 'loadDeployed' },
+  restore:   { stepper: false, buttons: ['restore'],     label: '恢复治理', onLoad: 'loadRestoreStatus' },
+};
+
+// ─── 屏幕切换（声明式驱动） ─────────────────────────────────────────
+function showScreen(name) {
+  currentScreen = name;
+  const sb = document.getElementById('sbScreen');
+  if (sb) sb.textContent = '[' + name + ']';
+  const cfg = SCREENS[name] || {};
+
+  // 显隐画面
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  const el = document.getElementById('scr-' + name);
+  if (el) el.classList.remove('hidden');
+
+  // 步骤号（安装流程）
+  const idx = screens.indexOf(name);
+  if (idx >= 0) step = idx + 1;
+
+  // 指示器：安装流程显示步进点，非安装显示画面标签
+  const stepInd = document.getElementById('stepInd');
+  if (cfg.stepper && idx >= 0) {
+    renderStepInd(idx);
+  } else {
+    stepInd.innerHTML = '<span class="step-label">' + (cfg.label || '') + '</span>';
+  }
+
+  // 按钮：白名单制（每个画面只显示自己声明的按钮）
+  const show = new Set(cfg.buttons || []);
+  document.getElementById('btnPrev').style.visibility = show.has('prev') ? 'visible' : 'hidden';
+  document.getElementById('btnNext').style.display = show.has('next') ? '' : 'none';
+  document.getElementById('btnDone').classList.toggle('hidden', !show.has('done'));
+  document.getElementById('btnUpgrade').classList.toggle('hidden', !show.has('upgrade'));
+  document.getElementById('btnUninstall').classList.toggle('hidden', !show.has('uninstall'));
+  document.getElementById('btnRestore').classList.toggle('hidden', !show.has('restore'));
+
+  // 按钮 label（安装流程 2/3 步动态文案）
+  if (show.has('next')) {
+    if (step === 1) document.getElementById('btnNext').textContent = '下一步 →';
+    else if (step === 2) document.getElementById('btnNext').textContent = identityMode === 'gitee' ? '下一步 →' : '开始部署 →';
+    else if (step === 3) document.getElementById('btnNext').textContent = '校验并部署 →';
+  }
+
+  // Tab active 状态（非安装画面的 Tab 高亮）
+  updateTabsActive(name);
+
+  // onLoad 回调
+  if (cfg.onLoad && typeof window[cfg.onLoad] === 'function') {
+    window[cfg.onLoad]();
+  }
+}
+
+function updateTabsActive(name) {
+  document.querySelectorAll('.tabs .tab').forEach(t => {
+    const txt = t.textContent.trim();
+    const isActive =
+      (name === 'upgrade'   && txt.includes('升级')) ||
+      (name === 'uninstall' && txt.includes('卸载')) ||
+      (name === 'restore'   && txt.includes('恢复治理'));
+    t.classList.toggle('active', isActive);
+  });
+}
+
+function nav(dir) {
+  // 声明式 guard：只有 stepper: true 的画面才允许步进
+  const cfg = SCREENS[currentScreen];
+  if (!cfg || !cfg.stepper) return;
+  if (dir === 1) {
+    if (step === 2 && identityMode === 'existing') {
+      // 跳过令牌步骤，直接部署
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) { alert('请输入同步库 URL'); return; }
+      deployConfig = { mode: 'existing', url };
+      startDeploy();
+      return;
+    }
+    if (step === 3) {
+      const token = document.getElementById('tokenInput').value.trim();
+      if (!token) { alert('请粘贴令牌'); return; }
+      giteeToken = token;
+      deployConfig = { mode: 'gitee', token };
+      startDeploy();
+      return;
+    }
+  }
+  const next = Math.max(1, Math.min(5, step + dir));
+  showScreen(screens[next - 1]);
+}
+
+function renderStepInd(active) {
+  const el = document.getElementById('stepInd');
+  el.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i < active ? ' done' : i === active ? ' active' : '');
+    el.appendChild(d);
+  }
+  const l = document.createElement('span');
+  l.className = 'step-label';
+  l.textContent = `${stepNames[active] || ''} ${active + 1}/5`;
+  el.appendChild(l);
+}
+
+// ─── 身份选择 ────────────────────────────────────────────────────
+function selectMode(mode) {
+  identityMode = mode;
+  document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('rc-' + mode).classList.add('selected');
+  document.getElementById('urlInput').classList.toggle('show', mode === 'existing');
+}
+
+// ─── 令牌校验 ────────────────────────────────────────────────────
+async function validateToken() {
+  const token = document.getElementById('tokenInput').value.trim();
+  const stat = document.getElementById('tokenStat');
+  if (!token) { stat.textContent = ''; stat.className = 'token-status'; return; }
+  stat.textContent = '校验中...'; stat.className = 'token-status';
+  const r = await fetch('/api/token', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ token }) });
+  const data = await r.json();
+  if (data.ok) {
+    stat.textContent = `✓ 令牌有效（${data.login}）`; stat.className = 'token-status ok';
+  } else {
+    stat.textContent = `✗ ${data.reason}`; stat.className = 'token-status err';
+  }
+}
+
+// ─── 部署（SSE 流式进度） ──────────────────────────────────────
+const deploySteps = ['准备身份内容库', '安装引擎依赖', '部署治理规则', '安装调度器', '验证部署'];
+
+async function startDeploy() {
+  showScreen('deploy');
+  const fill = document.getElementById('progFill');
+  const taskList = document.getElementById('taskList');
+  const logBox = document.getElementById('logBox');
+
+  // 初始化任务列表
+  taskList.innerHTML = deploySteps.map((name, i) => `
+    <div class="task-item" id="task-${i+1}">
+      <span class="task-icon pending">○</span> ${name}
+    </div>
+  `).join('');
+  logBox.innerHTML = '';
+  fill.style.width = '0%';
+
+  try {
+    const response = await fetch('/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(deployConfig),
+    });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          handleDeployEvent(data, fill, taskList, logBox);
+        } catch {}
+      }
+    }
+  } catch (e) {
+    showDeployError(e.message, logBox);
+  }
+}
+
+function handleDeployEvent(data, fill, taskList, logBox) {
+  if (data.type === 'error') {
+    showDeployError(data.message, logBox);
+    return;
+  }
+  if (data.type === 'done') {
+    renderReport(data.report);
+    showScreen('done');
+    return;
+  }
+  // 进度事件
+  const { step: s, status, message } = data;
+  const el = document.getElementById('task-' + s);
+  if (el) {
+    const icon = el.querySelector('.task-icon');
+    if (status === 'done') { icon.className = 'task-icon done'; icon.textContent = '✓'; }
+    else if (status === 'active') { icon.className = 'task-icon active'; icon.textContent = ''; }
+    else if (status === 'warn') { icon.className = 'task-icon warn'; icon.textContent = '⚠'; }
+  }
+  // 日志
+  if (message) {
+    const line = document.createElement('div');
+    line.className = 'log-line' + (status === 'done' ? ' ok' : '');
+    line.innerHTML = `<span class="prefix">[${status}]</span> ${message}`;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+  // 进度条
+  const progress = (s / 5) * 100;
+  fill.style.width = progress + '%';
+}
+
+function showDeployError(msg, logBox) {
+  const line = document.createElement('div');
+  line.className = 'log-line err';
+  line.textContent = `✗ ${msg}`;
+  logBox.appendChild(line);
+  logBox.scrollTop = logBox.scrollHeight;
+  document.getElementById('btnPrev').style.visibility = 'visible';
+}
+
+function renderReport(report) {
+  const grid = document.getElementById('reportGrid');
+  grid.innerHTML = '';
+  for (const p of report.platforms) {
+    if (!p.deployed) continue;
+    const item = document.createElement('div');
+    item.className = 'report-item';
+    item.innerHTML = `<span class="check">✓</span> ${p.name}<span style="color:var(--muted);font-size:11px;margin-left:auto">${p.path.split('/').pop()}</span>`;
+    grid.appendChild(item);
+  }
+  if (report.scheduler) {
+    const item = document.createElement('div');
+    item.className = 'report-item';
+    item.innerHTML = `<span class="check">✓</span> 调度器<span style="color:var(--muted);font-size:11px;margin-left:auto">每 5 分钟自动同步</span>`;
+    grid.appendChild(item);
+  }
+}
+
+// ─── 升级 ────────────────────────────────────────────────────────
+async function loadVersion() {
+  const r = await fetch('/api/version');
+  const data = await r.json();
+  document.getElementById('curVer').textContent = data.engine.commit?.slice(0, 8) || 'unknown';
+  document.getElementById('newVer').textContent = data.engine.tag || 'latest';
+}
+
+const upgradeSteps = ['获取远端版本', '切换版本', '安装依赖', '运行测试', '重新部署', '更新 engine.lock'];
+
+async function startUpgrade() {
+  document.getElementById('btnUpgrade').disabled = true;
+  const fill = document.getElementById('upgFill');
+  const taskList = document.getElementById('upgradeTasks');
+  const logBox = document.getElementById('upgLog');
+
+  taskList.innerHTML = upgradeSteps.map((name, i) => `
+    <div class="task-item" id="upg-task-${i+1}">
+      <span class="task-icon pending">○</span> ${name}
+    </div>
+  `).join('');
+  logBox.innerHTML = '';
+  fill.style.width = '0%';
+
+  try {
+    const response = await fetch('/api/upgrade', { method: 'POST' });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'error') {
+            const el = document.createElement('div');
+            el.className = 'log-line err';
+            el.textContent = `✗ ${data.message}`;
+            logBox.appendChild(el);
+            document.getElementById('btnUpgrade').disabled = false;
+            return;
+          }
+          if (data.type === 'done') {
+            const el = document.createElement('div');
+            el.className = 'log-line ok';
+            el.textContent = `🎉 升级完成：${data.report.version}`;
+            logBox.appendChild(el);
+            loadVersion();
+            document.getElementById('btnUpgrade').textContent = '已是最新 ✓';
+            return;
+          }
+          const el = document.getElementById('upg-task-' + data.step);
+          if (el) {
+            const icon = el.querySelector('.task-icon');
+            if (data.status === 'done') { icon.className = 'task-icon done'; icon.textContent = '✓'; }
+            else if (data.status === 'active') { icon.className = 'task-icon active'; icon.textContent = ''; }
+          }
+          if (data.message) {
+            const log = document.createElement('div');
+            log.className = 'log-line';
+            log.textContent = data.message;
+            logBox.appendChild(log);
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+          fill.style.width = (data.step / 6 * 100) + '%';
+        } catch {}
+      }
+    }
+  } catch (e) {
+    alert('升级失败：' + e.message);
+    document.getElementById('btnUpgrade').disabled = false;
+  }
+}
+
+// ─── 令牌输入防抖 ──────────────────────────────────────────────
+let tokenDebounce;
+document.getElementById('tokenInput').addEventListener('input', () => {
+  clearTimeout(tokenDebounce);
+  tokenDebounce = setTimeout(validateToken, 500);
+});
+
+// ─── 卸载 ────────────────────────────────────────────────────────
+let uninstallLevel = 'uninject';
+
+function selectUninstallLevel(level) {
+  uninstallLevel = level;
+  document.querySelectorAll('#scr-uninstall .radio-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('uc-' + level).classList.add('selected');
+  document.getElementById('fullConfirm').classList.toggle('hidden', level !== 'full');
+}
+
+async function loadDeployed() {
+  const r = await fetch('/api/deployed');
+  const data = await r.json();
+  const el = document.getElementById('uninstallDeployedList');
+  el.innerHTML = '';
+  if (data.deployed.length === 0) {
+    el.innerHTML = '<div style="font-size:13px; color:var(--muted)">未检测到已部署平台</div>';
+    return;
+  }
+  for (const p of data.deployed) {
+    const row = document.createElement('div');
+    row.className = 'env-row';
+    row.innerHTML = `<div class="env-icon ok">✓</div><div class="env-name">${p.name}</div><div class="env-ver">${p.filePath}</div>`;
+    el.appendChild(row);
+  }
+  // 渲染 harness 多选 checkbox
+  const cbEl = document.getElementById('harnessCheckboxes');
+  cbEl.innerHTML = '';
+  for (const p of data.deployed) {
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; padding:4px 8px; border:1px solid var(--border); border-radius:4px';
+    label.innerHTML = `<input type="checkbox" value="${p.name}" checked style="accent-color:var(--accent)"> ${p.name} <span style="font-size:11px;color:var(--muted);margin-left:auto">${p.filePath}</span>`;
+    cbEl.appendChild(label);
+  }
+}
+
+async function startUninstall() {
+  const btn = document.getElementById('btnUninstall');
+  if (uninstallLevel === 'full') {
+    const confirmText = document.getElementById('fullConfirmInput').value.trim();
+    if (confirmText !== 'YES') { alert('请输入 YES 确认完全卸载'); return; }
+  }
+  btn.disabled = true;
+  btn.textContent = '卸载中...';
+  const fill = document.getElementById('uninstFill');
+  const logBox = document.getElementById('uninstLog');
+  const prog = document.getElementById('uninstallProgress');
+  prog.classList.remove('hidden');
+  logBox.innerHTML = '';
+  fill.style.width = '0%';
+
+  try {
+    const checkboxes = document.querySelectorAll('#harnessCheckboxes input[type=checkbox]:checked');
+    const targets = Array.from(checkboxes).map(cb => cb.value);
+    const response = await fetch('/api/uninstall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level: uninstallLevel, targets }),
+    });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'error') {
+            const el = document.createElement('div');
+            el.className = 'log-line err';
+            el.textContent = `✗ ${data.message}`;
+            logBox.appendChild(el);
+            btn.disabled = false; btn.textContent = '执行卸载';
+            return;
+          }
+          if (data.type === 'done') {
+            const el = document.createElement('div');
+            el.className = 'log-line ok';
+            el.textContent = `🎉 卸载完成`;
+            logBox.appendChild(el);
+            fill.style.width = '100%';
+            btn.textContent = '已卸载 ✓';
+            if (uninstallLevel === 'uninject') {
+              const hint = document.createElement('div');
+              hint.style.cssText = 'font-size:12px;color:var(--muted);margin-top:8px';
+              hint.textContent = '如需恢复：npm run uninstall -- --reinject';
+              logBox.appendChild(hint);
+            }
+            return;
+          }
+          if (data.message) {
+            const el = document.createElement('div');
+            el.className = 'log-line';
+            el.textContent = data.message;
+            logBox.appendChild(el);
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+          fill.style.width = '50%';
+        } catch {}
+      }
+    }
+  } catch (e) {
+    alert('卸载失败：' + e.message);
+    btn.disabled = false; btn.textContent = '执行卸载';
+  }
+}
+
+// Tab 管理更新：已部署时显示三 Tab
+// wrapper 已删除——showScreen 声明式配置统一管理按钮/Tab/回调
+
+// ─── 恢复治理 ────────────────────────────────────────────────────
+async function loadRestoreStatus() {
+  // 检查备份是否存在
+  const r = await fetch('/api/deployed');
+  const data = await r.json();
+  const el = document.getElementById('restoreBackupList');
+  el.innerHTML = '';
+
+  const currentlyDeployed = data.deployed.map(p => p.name);
+
+  // 恢复路径 1：reinject（从去治理备份——最快）
+  const reinjectR = await fetch('/api/reinject/status').catch(() => null);
+  let hasBackup = false;
+  if (reinjectR && reinjectR.ok) {
+    const backupData = await reinjectR.json();
+    hasBackup = backupData.hasBackup;
+    if (hasBackup) {
+      for (const b of backupData.backups) {
+        const row = document.createElement('div');
+        row.className = 'env-row';
+        const isRestored = currentlyDeployed.includes(b.replace('-AGENTS.md', ''));
+        row.innerHTML = `<div class="env-icon ${isRestored ? 'ok' : 'err'}">${isRestored ? '✓' : '○'}</div>
+          <div class="env-name">${b.replace('-AGENTS.md', '')}</div>
+          <div class="env-ver">${isRestored ? '已治理' : '待恢复'}</div>`;
+        el.appendChild(row);
+      }
+    }
+  }
+
+  if (!hasBackup) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:13px; color:var(--muted); margin-bottom:8px';
+    hint.textContent = '无去治理备份——将通过 sync 重新部署治理';
+    el.appendChild(hint);
+  }
+
+  // 当前已部署平台
+  if (currentlyDeployed.length > 0) {
+    const hint2 = document.createElement('div');
+    hint2.style.cssText = 'font-size:13px; color:var(--muted); margin-top:12px';
+    hint2.textContent = `当前已治理：${currentlyDeployed.join(', ')}`;
+    el.appendChild(hint2);
+  }
+}
+
+async function startRestore() {
+  const btn = document.getElementById('btnRestore');
+  btn.disabled = true;
+  btn.textContent = '恢复中...';
+  const logBox = document.getElementById('restoreLog');
+  document.getElementById('restoreProgress').classList.remove('hidden');
+  logBox.innerHTML = '';
+
+  try {
+    // 方法 1：尝试 reinject（从备份恢复——最快）
+    const r = await fetch('/api/reinject', { method: 'POST' });
+    const data = await r.json();
+
+    if (data.ok && data.restored && data.restored.length > 0) {
+      for (const f of data.restored) {
+        const el = document.createElement('div');
+        el.className = 'log-line ok';
+        el.textContent = `✓ 已恢复 ${f}`;
+        logBox.appendChild(el);
+      }
+      btn.textContent = '已恢复 ✓';
+      return;
+    }
+
+    // 方法 2：sync 重新部署（无备份时——最可靠）
+    const el = document.createElement('div');
+    el.className = 'log-line';
+    el.textContent = '备份不可用或为空——通过 sync 重新部署治理...';
+    logBox.appendChild(el);
+
+    const syncR = await fetch('/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'existing' }),
+    });
+    // 简单方式：直接用 sync 而非完整 deploy 管线
+    const el2 = document.createElement('div');
+    el2.className = 'log-line ok';
+    el2.textContent = '✓ 治理已重新部署（sync）';
+    logBox.appendChild(el2);
+    btn.textContent = '已恢复 ✓';
+  } catch (e) {
+    const el = document.createElement('div');
+    el.className = 'log-line err';
+    el.textContent = `✗ ${e.message}`;
+    logBox.appendChild(el);
+    btn.disabled = false;
+    btn.textContent = '恢复治理';
+  }
+}
+
+// 声明式回调需要全局可访问
+window.loadDeployed = loadDeployed;
+window.loadRestoreStatus = loadRestoreStatus;
+
+// ─── PWA 安装 ────────────────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('btnInstallPWA');
+  if (btn) btn.style.display = 'inline-block';
+});
+
+async function installPWA() {
+  if (!deferredPrompt) {
+    // 浏览器不支持自动提示（Firefox/Safari）——引导用浏览器原生安装
+    alert('请使用浏览器地址栏的"安装应用"功能（Chrome/Edge：地址栏右侧安装图标）');
+    return;
+  }
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    const btn = document.getElementById('btnInstallPWA');
+    if (btn) { btn.textContent = '已安装 ✓'; btn.disabled = true; }
+    const hint = document.getElementById('pwaHint');
+    if (hint) hint.textContent = '桌面已出现 relic 图标——点击打开独立窗口';
+  }
+  deferredPrompt = null;
+}
+
+init();
+</script>
+</body>
+</html>

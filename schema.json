@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://relic.local/schemas/policies.v2.json",
+  "title": "relic policies v2",
+  "type": "object",
+  "required": ["meta", "permissions"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["version", "description"],
+      "properties": {
+        "version": { "type": "integer", "const": 2 },
+        "description": { "type": "string", "minLength": 1 },
+        "evaluation": { "type": "string" },
+        "profile": {
+          "type": "object",
+          "description": "Active profile (set by loadProfile; absent in single-file mode).",
+          "properties": {
+            "id":   { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+            "name": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "habits": {
+          "type": "object",
+          "description": "Machine-local habits view (set by generate CLI/pipeline; consumed by the renderer). Never stored in the content repo: excluded from the golden baseline, covered by the determinism input signature.",
+          "properties": {
+            "date":   { "type": "string", "minLength": 1 },
+            "digest": { "type": "string" },
+            "top":      { "type": "array", "items": { "$ref": "#/definitions/habitViewEntry" } },
+            "solidify": { "type": "array", "items": { "$ref": "#/definitions/habitViewEntry" } }
+          },
+          "required": ["date", "top", "solidify"],
+          "additionalProperties": false
+        },
+        "runtimeRoot": {
+          "type": "string",
+          "description": "Absolute path of the runtime clone (set by generate CLI); used to build on-demand pointers in AGENTS.md."
+        },
+        "workflowSources": {
+          "type": "object",
+          "description": "workflow id -> source module id ('manifest' for inline entry workflows). Set by mergeFragments; consumed by the renderer for on-demand pointers.",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "permissions": { "type": "array", "items": { "$ref": "#/definitions/permission" } },
+    "workflows":   { "type": "array", "items": { "$ref": "#/definitions/workflow" }, "default": [] },
+    "risk_levels": { "$ref": "#/definitions/riskLevels", "default": { "low": [], "medium": [], "high": [] } },
+    "personas": {
+      "type": "array",
+      "description": "SLOT (persona feature deferred). Shape reserved for forward-compat; no generator consumes it yet.",
+      "items": { "$ref": "#/definitions/personaSlot" },
+      "default": []
+    },
+    "modules": {
+      "type": "array",
+      "description": "Module registry: declared modules (id/name/version/enabled). Profiles reference these ids; rule fragments live at modules/<id>/module.yaml. Consumed by loadProfile (direction 3).",
+      "items": { "$ref": "#/definitions/moduleSlot" },
+      "default": []
+    },
+    "profiles": {
+      "type": "array",
+      "description": "Profiles select a subset of registry modules to load per session (direction 3). Default profile used when --profile omitted.",
+      "items": { "$ref": "#/definitions/profile" },
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "habitViewEntry": {
+      "type": "object",
+      "description": "One projected habit row inside meta.habits (renderer input only; no machine paths leak into content).",
+      "properties": {
+        "observation": { "type": "string", "minLength": 1 },
+        "evidence":    { "type": "string" },
+        "hits":        { "type": "number" }
+      },
+      "required": ["observation"],
+      "additionalProperties": false
+    },
+    "permission": {
+      "type": "object",
+      "required": ["id", "intent", "applies_to", "enforcement", "tool", "action"],
+      "properties": {
+        "id":          { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "intent":      { "type": "string", "minLength": 5 },
+        "applies_to":   { "type": "array", "items": { "enum": ["primary","deep","subagent","all"] }, "minItems": 1 },
+        "enforcement": { "enum": ["runtime", "advisory"] },
+        "tool":         { "enum": ["bash", "edit", "webfetch", "external_directory"] },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": { "type": "string", "minLength": 1 },
+              "action":  { "enum": ["ask", "deny", "allow"] }
+            },
+            "required": ["pattern"],
+            "additionalProperties": false
+          }
+        },
+        "action":        { "enum": ["ask", "deny", "allow"] },
+        "alternatives":  { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if":   { "properties": { "tool": { "const": "bash" } }, "required": ["tool"] },
+          "then": { "required": ["id","intent","applies_to","enforcement","tool","action","patterns"] }
+        }
+      ]
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["id", "intent", "steps"],
+      "properties": {
+        "id":          { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "intent":      { "type": "string", "minLength": 5 },
+        "applies_when":{ "type": "string" },
+        "priority":    { "enum": ["critical", "high", "normal"], "default": "normal" },
+        "steps":       { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      },
+      "additionalProperties": false
+    },
+    "riskLevels": {
+      "type": "object",
+      "properties": {
+        "low":    { "type": "array", "items": { "type": "string" }, "default": [] },
+        "medium": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "high":   { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "personaSlot": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id":         { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name":       { "type": "string", "minLength": 1 },
+        "tone":       { "type": "string" },
+        "directives": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "default":    { "type": "boolean", "description": "Rendered as the active persona (v1 renders only the default).", "default": false },
+        "identity":   { "type": "string", "description": "One-line self-identity / role positioning." },
+        "language":   { "type": "string", "description": "Reply language, e.g. zh-CN." },
+        "verbosity":  { "enum": ["terse", "compact", "detailed"] }
+      },
+      "additionalProperties": false
+    },
+    "moduleSlot": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id":      { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name":    { "type": "string", "minLength": 1 },
+        "version": { "type": "string" },
+        "enabled": { "type": "boolean", "default": true },
+        "config":  { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": ["id", "name", "modules"],
+      "properties": {
+        "id":      { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name":    { "type": "string", "minLength": 1 },
+        "modules": {
+          "oneOf": [
+            { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } },
+            { "const": "all" }
+          ]
+        },
+        "default": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "moduleFragment": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id":          { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "permissions": { "type": "array", "items": { "$ref": "#/definitions/permission" }, "default": [] },
+        "workflows":   { "type": "array", "items": { "$ref": "#/definitions/workflow" }, "default": [] },
+        "risk_levels": { "$ref": "#/definitions/riskLevels", "default": { "low": [], "medium": [], "high": [] } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

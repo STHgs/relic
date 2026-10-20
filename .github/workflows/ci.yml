@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # tier4 CI 模式需要 HEAD~1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+      - run: node scripts/tier4-skeleton.mjs
+      - name: 引擎库防混入断言（内容文件永不出现在 source 库）
+        run: |
+          test ! -e policies.yaml || (echo '::error::policies.yaml 不得出现在引擎库（内容属同步库）' && exit 1)
+          test ! -d modules || (echo '::error::modules/ 不得出现在引擎库（内容属同步库）' && exit 1)

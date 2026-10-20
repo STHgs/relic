@@ -1,0 +1,18 @@
+# tests/fixtures/modules-bad-dupe-id/module-b.yaml — fragment with SAME id "dupe-rule"
+# Paired with module-a.yaml to trigger cross-module id clash (L9).
+id: bad-dupe-b
+permissions:
+  - id: dupe-rule
+    intent: Second instance of the same rule id (should clash)
+    applies_to: [deep]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "bar *"
+        action: ask
+    action: ask
+workflows: []
+risk_levels:
+  low: []
+  medium: []
+  high: []

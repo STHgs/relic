@@ -1,0 +1,16 @@
+# tests/fixtures/modules/web-safety/module.yaml — fragment
+id: web-safety
+permissions:
+  - id: external-dir-ask
+    intent: Confirm access to paths outside the workspace
+    applies_to: [all]
+    enforcement: runtime
+    tool: external_directory
+    action: ask
+    alternatives: []
+workflows: []
+risk_levels:
+  low: []
+  medium:
+    - webfetch any URL
+  high: []

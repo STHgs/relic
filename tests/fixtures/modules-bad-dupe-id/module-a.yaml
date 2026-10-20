@@ -1,0 +1,18 @@
+# tests/fixtures/modules-bad-dupe-id/module-a.yaml — fragment with id "dupe-rule"
+# Used by L9: two modules defining the same permission id → ok:false, idClashes non-empty.
+id: bad-dupe-a
+permissions:
+  - id: dupe-rule
+    intent: First instance of a duplicated rule id
+    applies_to: [primary]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "foo *"
+        action: ask
+    action: ask
+workflows: []
+risk_levels:
+  low: []
+  medium: []
+  high: []

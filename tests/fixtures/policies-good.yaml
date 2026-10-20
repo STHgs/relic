@@ -1,0 +1,43 @@
+# Known-valid v2 policies fixture (subset redacted from live agent-governance policies).
+# Asserts V1: validator returns ok:true and applies defaults.
+meta:
+  version: 2
+  description: Known-valid v2 fixture (subset redacted from live policies)
+  evaluation: test fixture
+permissions:
+  - id: sudo-ask
+    intent: Require confirmation before privilege escalation
+    applies_to: [primary, deep]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "sudo *"
+        action: ask
+    action: ask
+    alternatives:
+      - Run without sudo when no privilege needed
+  - id: external-dir-ask
+    intent: Confirm access to paths outside the workspace
+    applies_to: [all]
+    enforcement: runtime
+    tool: external_directory
+    action: ask
+    alternatives: []
+workflows:
+  - id: pdf-read
+    intent: Read PDFs in paged chunks to avoid context overflow
+    applies_when: reading large PDFs
+    priority: normal
+    steps:
+      - Use look_at for summary first
+      - Use read with offset/limit for detail
+      - Use multimodal-looker for tables and diagrams
+risk_levels:
+  low:
+    - pip install known public libraries
+  medium:
+    - webfetch any URL
+  high:
+    - mount or umount disks
+personas: []
+modules: []

@@ -1,0 +1,28 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+
+# Node
+node_modules/
+
+# Generated orchestrator output (never committed)
+generated/
+
+# Backup files
+*.bak.*
+
+# Export archives
+*.tar.gz
+
+# Sync state (per-clone, untracked)
+.last-sync
+.relic-deploy
+
+# Per-machine identity registration (engine side)
+relic.config.json
+
+# Private dev handoff / plans (archived outside this repo)
+AGENTS.md
+output/
+interaction/

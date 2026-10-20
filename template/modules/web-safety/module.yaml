@@ -1,0 +1,38 @@
+# modules/web-safety/module.yaml — 网络/外部路径访问安全
+id: web-safety
+permissions:
+  - id: webfetch-ask
+    intent: Confirm web fetches to prevent data exfiltration or untrusted content
+    applies_to: [all]
+    enforcement: runtime
+    tool: webfetch
+    action: ask
+    alternatives:
+      - Prefer the librarian assistant for known-trustful documentation queries
+      - User-provided URLs are fetched normally, the system will prompt for confirmation
+
+  - id: external-dir-ask
+    intent: Confirm access to paths outside the workspace. Linux paths are unrestricted; Windows paths require confirmation to protect file safety.
+    applies_to: [all]
+    enforcement: runtime
+    tool: external_directory
+    action: ask
+    patterns:
+      - pattern: "/tmp/*"
+        action: allow
+      - pattern: "/home/*"
+        action: allow
+      - pattern: "/mnt/c/*"
+      - pattern: "/mnt/d/*"
+      - pattern: "/mnt/e/*"
+    alternatives:
+      - Linux paths are freely accessible, no confirmation needed
+      - Windows paths are confirmed in the popup
+workflows: []
+risk_levels:
+  low: []
+  medium:
+    - webfetch any URL
+    - Access paths outside workspace
+    - Install system-level packages (apt/brew)
+  high: []

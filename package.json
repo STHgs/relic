@@ -1,0 +1,33 @@
+{
+  "name": "relic",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Portable personal agent-configuration system (rules/workflows/persona).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/STHgs/relic-source.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "generate": "node src/orchestrator/generate.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "export": "node scripts/export.mjs",
+    "sync": "node scripts/sync.mjs",
+    "check:skeleton": "node scripts/tier4-skeleton.mjs",
+    "init-sync": "node scripts/init-sync.mjs",
+    "install-schedule": "node scripts/install-schedule.mjs",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "upgrade": "node scripts/upgrade.mjs",
+    "cleanup-backups": "node scripts/cleanup-backups.mjs",
+    "wizard": "node scripts/wizard.mjs",
+    "uninstall": "node scripts/uninstall.mjs"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "yaml": "2.9.0"
+  }
+}

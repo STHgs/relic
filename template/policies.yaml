@@ -1,0 +1,78 @@
+# relic template manifest — 新配置身份的种子（init-sync 默认导入）
+# 改这里的规则 → 同步库内编辑，5 分钟自动全域生效
+meta:
+  version: 2
+  description: relic per-identity governance content (seeded from template)
+  evaluation: 按风险分级判断，避免消极回避
+
+permissions: []
+
+# 助手人设（声明层工作习惯）——取消注释并按需修改；改后 commit+push，5 分钟全域生效。
+# 学习机制会自动适应用户偏好（本机 ~/.config/relic-habits/learned.yaml）；
+# 说"记住/固化"可把学到的东西晋升到这里。
+personas: []
+# personas:
+#   - id: default
+#     name: 主人设
+#     default: true
+#     identity: "简洁、直接的资深工程搭档"
+#     language: zh-CN
+#     tone: "技术准确优先，不绕弯子；不确定就说不确定"
+#     verbosity: compact        # terse | compact | detailed
+#     directives:
+#       - 先给结论，再给依据
+#       - 代码改动必须说明影响面
+
+workflows:
+  - id: add-permission
+    intent: Add a new permission rule via conversational interview
+    applies_when: "user wants to add or change a permission rule (trigger words: 加规则 / add permission / /permission / 加一条权限)"
+    priority: high
+    steps:
+      - "Ask user for required fields: id (lowercase-kebab), intent (what it does), applies_to (primary/deep/subagent/all), enforcement (runtime/advisory), tool (bash/edit/webfetch/external_directory), patterns (for bash: the command globs), action (ask/deny/allow)"
+      - "Construct a JSON rule object from the answers"
+      - "Run `node src/core/inject.mjs --type=permission --dry-run '<JSON>'` to preview (shows yamlSnippet + conflictCheck)"
+      - "Show the yamlSnippet and any duplicates/conflicts/warnings to the user"
+      - "On user confirm, re-run with --apply (auto-runs generate so the rule takes effect across detected platforms)"
+      - "If id clash or validation fails, report the error and restart the interview"
+
+  - id: add-workflow
+    intent: Add a new workflow via conversational interview
+    applies_when: "user wants to add or change a workflow (trigger words: 加流程 / add workflow / /workflow / 加一个流程)"
+    priority: high
+    steps:
+      - "Ask user for: id (lowercase-kebab), intent (when to use it), applies_when (trigger condition), priority (critical/high/normal), steps (list of actions)"
+      - "Construct a JSON workflow object from the answers"
+      - "Run `node src/core/inject.mjs --type=workflow --dry-run '<JSON>'` to preview"
+      - "Show the yamlSnippet and conflictCheck to the user"
+      - "On user confirm, re-run with --apply (auto-runs generate)"
+  - id: habit-promotion
+    intent: Promote a learned habit into the declared persona layer (user-triggered)
+    applies_when: user says remember/pin a habit (记住/固化这条习惯)
+    priority: normal
+    steps:
+      - "Confirm the exact habit wording with the user (one sentence)"
+      - "Append it to personas[default].directives in the sync repo policies.yaml"
+      - "commit with message chore(persona): promote <habit summary> and push"
+      - "Tell the user it takes effect across all platforms within 5 minutes; optionally remove the matching entry from local learned.yaml"
+
+risk_levels:
+  low: []
+  medium: []
+  high: []
+
+modules:
+  - id: sudo-safety
+    name: Sudo Safety
+  - id: disk-protect
+    name: Disk Protect
+  - id: web-safety
+    name: Web Safety
+  - id: build-hygiene
+    name: Build Hygiene
+
+profiles:
+  - id: full
+    name: Full profile
+    modules: all
+    default: true

@@ -1,0 +1,41 @@
+# template/modules/build-hygiene — 构建卫生流程（种子版，可按需修改）
+id: build-hygiene
+permissions: []
+workflows:
+  - id: plan-then-build
+    intent: Plan before build for complex tasks to avoid rework
+    applies_when: any task involving code/config/artifact writes (single-file trivial edits like typo/config-value can skip)
+    priority: critical
+    steps:
+      - "Analyze request and show plan (which files, what changes, why, expected result); plan should be specific enough for the user to judge fit"
+      - "After showing the plan, wait for approval keyword (build/go); do not execute any edit operations before approval; if the user requests plan adjustments, continue planning"
+      - "After user approval, enter build mode and execute edits; after completion, return to plan mode (await approval for the next task)"
+      - "Exception: single-file trivial edits (typo fix, config value change, rename) can be executed directly without plan; when unsure if trivial, default to the plan flow"
+  - id: download-cleanup
+    intent: Clean up download/install artifacts to keep environment tidy
+    applies_when: after pip/apt/npm install or curl/wget download
+    priority: normal
+    steps:
+      - "Record all created files/packages to a cleanup list"
+      - "Delete temp downloads after task completes (success or fail)"
+      - "Uninstall temporarily installed packages"
+      - "Confirm cleanup complete: Removed: <list>"
+      - "Cleanup failures must be reported explicitly, never silently leave residue"
+  - id: project-scaffold
+    intent: Unified directory structure for new projects, separating code from interaction feedback
+    applies_when: when the user requests it, or when an agent needs it during task execution
+    priority: normal
+    steps:
+      - "Create `AGENTS.md` in the project root folder as the cross-session/platform handoff file; 6 fixed sections: task goal, current progress, key decisions, known constraints, file map, handoff notes; update progress and handoff before each session ends; write facts only; keep under 200 lines"
+      - "Create standard structure: `<project-name>/interaction/` (user input/feedback) and `<project-name>/output/` (agent artifacts, versioned v1/v1.1, never overwriting)"
+      - "When the user reports project issues, save materials into `interaction/`; when processing feedback, first `ls -lt` interaction/ and output/ to find the latest files"
+      - "Packaged artifacts go to the workspace root, at the same level as the project main folder"
+risk_levels:
+  low:
+    - pip/npm install known public libraries
+    - Read/write files in current project directory
+    - Run project tests, lint, build
+    - git status/diff/log (read-only)
+    - Create temp files in workspace
+  medium: []
+  high: []

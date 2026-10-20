@@ -1,0 +1,141 @@
+# modules/disk-protect/module.yaml — 磁盘破坏 + Windows 盘写入保护 + 治理文件自保护
+id: disk-protect
+permissions:
+  - id: mount-ask
+    intent: Disk mount/unmount is high-risk, main-assistant only, requires user confirmation
+    applies_to: [primary]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "mount *"
+        action: ask
+      - pattern: "umount *"
+        action: ask
+      - pattern: "losetup *"
+        action: ask
+    action: ask
+    alternatives:
+      - Accessing already-mounted paths does not require re-mounting
+      - When a sub-assistant needs to mount, route the request back to the main assistant
+
+  - id: destructive-cmd-deny
+    intent: Block destructive disk operations that can wipe the environment or governance files
+    applies_to: [all]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "rm -rf /*"
+        action: deny
+      - pattern: "dd if=* of=/dev/*"
+        action: deny
+      - pattern: "mkfs*"
+        action: deny
+      - pattern: "fdisk*"
+        action: deny
+      - pattern: "rm -rf ~/.config/opencode/*"
+        action: deny
+    action: deny
+    alternatives:
+      - Use precise paths for file deletion, not rm -rf /
+      - For device writes/formatting/partitioning, explain to the user (this rule is deny — it will be refused; change the rule if you need to allow)
+
+  - id: windows-write-ask
+    intent: Confirm writes to Windows mount points (/mnt/c, /mnt/d, /mnt/e) to prevent accidental cross-OS damage. Read operations are not intercepted.
+    applies_to: [all]
+    enforcement: runtime
+    tool: bash
+    patterns:
+      - pattern: "rm * /mnt/c/*"
+        action: ask
+      - pattern: "rm * /mnt/d/*"
+        action: ask
+      - pattern: "rm * /mnt/e/*"
+        action: ask
+      - pattern: "mv * /mnt/c/*"
+        action: ask
+      - pattern: "mv * /mnt/d/*"
+        action: ask
+      - pattern: "mv * /mnt/e/*"
+        action: ask
+      - pattern: "cp * /mnt/c/*"
+        action: ask
+      - pattern: "cp * /mnt/d/*"
+        action: ask
+      - pattern: "cp * /mnt/e/*"
+        action: ask
+      - pattern: "dd * of=/mnt/c/*"
+        action: ask
+      - pattern: "dd * of=/mnt/d/*"
+        action: ask
+      - pattern: "dd * of=/mnt/e/*"
+        action: ask
+      - pattern: "chmod * /mnt/c/*"
+        action: ask
+      - pattern: "chmod * /mnt/d/*"
+        action: ask
+      - pattern: "chmod * /mnt/e/*"
+        action: ask
+      - pattern: "chown * /mnt/c/*"
+        action: ask
+      - pattern: "chown * /mnt/d/*"
+        action: ask
+      - pattern: "chown * /mnt/e/*"
+        action: ask
+      - pattern: "tee /mnt/c/*"
+        action: ask
+      - pattern: "tee /mnt/d/*"
+        action: ask
+      - pattern: "tee /mnt/e/*"
+        action: ask
+      - pattern: "rsync * /mnt/c/*"
+        action: ask
+      - pattern: "rsync * /mnt/d/*"
+        action: ask
+      - pattern: "rsync * /mnt/e/*"
+        action: ask
+      - pattern: "scp * /mnt/c/*"
+        action: ask
+      - pattern: "scp * /mnt/d/*"
+        action: ask
+      - pattern: "scp * /mnt/e/*"
+        action: ask
+    action: ask
+    alternatives:
+      - Read-only access to /mnt/c|d|e is unrestricted (cat, ls, grep, etc.)
+      - When you genuinely need to write to Windows drives, confirm in the popup
+      - Redirect writes (> /mnt/c/...) are handled by the shell and may not be intercepted — use with caution
+
+  - id: edit-windows-ask
+    intent: Confirm edit tool modifications to Windows path files to prevent accidental cross-OS changes
+    applies_to: [all]
+    enforcement: runtime
+    tool: edit
+    action: ask
+    patterns:
+      - pattern: "/mnt/c/*"
+      - pattern: "/mnt/d/*"
+      - pattern: "/mnt/e/*"
+    alternatives:
+      - Editing files within the workspace is unrestricted
+      - When you need to edit Windows path files, confirm in the popup
+
+  - id: agent-self-protection
+    intent: Prevent agent from accidentally deleting/moving its own governance files, which would disable rules
+    applies_to: [all]
+    enforcement: runtime
+    tool: bash
+    action: ask
+    patterns:
+      - pattern: "rm * ~/.config/opencode/*"
+      - pattern: "mv * ~/.config/opencode/*"
+    alternatives:
+      - Use the edit tool to modify governance files (legitimate), not rm/mv to destroy
+      - When deletion is needed, confirm in the popup
+workflows: []
+risk_levels:
+  low: []
+  medium: []
+  high:
+    - mount/umount disk operations
+    - Read/write system directories (/etc, /var, /usr)
+    - Modify global config files

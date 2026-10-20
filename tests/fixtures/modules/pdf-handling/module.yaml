@@ -1,0 +1,17 @@
+# tests/fixtures/modules/pdf-handling/module.yaml — fragment
+id: pdf-handling
+permissions: []
+workflows:
+  - id: pdf-read
+    intent: Read PDFs in paged chunks to avoid context overflow
+    applies_when: reading large PDFs
+    priority: normal
+    steps:
+      - Use look_at for summary first
+      - Use read with offset/limit for detail
+      - Use multimodal-looker for tables and diagrams
+risk_levels:
+  low:
+    - pip install known public libraries
+  medium: []
+  high: []

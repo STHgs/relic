@@ -1,0 +1,15 @@
+# INVALID fixture: enforcement: hook present (proves bug #2 rejection, F1 = DROP).
+# Asserts V3: validator rejects with error mentioning enforcement enum.
+meta:
+  version: 2
+  description: INVALID fixture - enforcement hook present (proves bug #2 rejection)
+permissions:
+  - id: claude-hook-block
+    intent: Block via Claude PreToolUse hook (dropped enum value)
+    applies_to: [all]
+    enforcement: hook   # <- dropped enum value (F1 = DROP)
+    tool: bash
+    patterns:
+      - pattern: "rm -rf /*"
+        action: deny
+    action: deny
