@@ -65,7 +65,7 @@ echo if ^(Test-Path ^(Join-Path $dest 'package.json'^)^) ^{
 echo     Write-Host '  [3/4] Already exists, skip download' -ForegroundColor Green
 echo ^} else ^{
 echo     git clone https://github.com/STHgs/relic.git $dest 2^>$null
-echo     if ^($LASTEXITCODE -ne 0^) ^{ Write-Host '  [ERROR] GitHub clone failed (Gitee mirror not published yet). Check network/proxy and retry.' -ForegroundColor Red; exit 1 ^}
+echo     if ^($LASTEXITCODE -ne 0^) ^{ Write-Host '  [ERROR] GitHub clone failed. Gitee mirror not published yet; check network/proxy and retry.' -ForegroundColor Red; exit 1 ^}
 echo ^}
 echo Write-Host '  [3/4] relic ready' -ForegroundColor Green
 echo.
