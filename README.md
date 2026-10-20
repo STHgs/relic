@@ -125,7 +125,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 
 - 提交门：`npm test` 全绿 + `npm run check:skeleton` PASS。
 - **改渲染器必须在同一提交 bump golden**；新增渲染输入要登记进 `computeDeterminismState`（输入闭合不变量）。
-- 架构与扩展点见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，协作约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 架构与不变量见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，协作约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 文档
 
