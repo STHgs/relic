@@ -51,7 +51,7 @@ cd relic; npm install; npm run wizard
 npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 ```
 
-> 同步库默认 Gitee（大陆可达）；`--provider github` 切 GitHub，需 `gh auth login`。
+> 同步库默认 Gitee（大陆可达）。改用 GitHub 走 `npm run init-sync -- --provider github`（需先 `gh auth login`）；`npm run bootstrap` 固定 Gitee。
 
 ## 常用命令
 
@@ -63,7 +63,7 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 | 去治理（保留一切，可恢复） | `npm run uninstall -- --level uninject` |
 | 恢复治理 | `npm run uninstall -- --reinject` |
 | 停服务（含调度器） | `npm run uninstall -- --level deactivate` |
-| 完全卸载（删引擎/内容/habits） | `npm run uninstall -- --level full` |
+| 完全卸载（先推送内容库，再删引擎/内容/habits；执行前确认） | `npm run uninstall -- --level full` |
 | 骨架门禁 | `npm run check:skeleton` |
 | 全量测试 | `npm test` |
 
@@ -105,7 +105,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 | push 被拒 | `gh auth refresh -h github.com -s repo,workflow` |
 | 端口 17777 被占 | 关掉旧向导；17777–17779 自动顺延 |
 | 自定义安装路径找不到 | 内容库 `harness-paths.json` 声明 > `DSH_HOME`/`OPENCODE_CONFIG`/`XDG_CONFIG_HOME` > 默认路径 |
-| Windows 调度器注册失败 | 管理员 PowerShell 重跑，或手动 `schtasks /Create /TN relic-sync /SC MINUTE /MO 5 /TR "cmd /c cd /d <repo> && npm run sync"` |
+| Windows 调度器注册失败 | 管理员 PowerShell：先 `schtasks /Delete /TN relic-sync /F`，再在引擎 clone 重跑 `npm run install-schedule` |
 
 ## 开发
 
