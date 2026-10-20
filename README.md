@@ -27,7 +27,21 @@ relic 取自《赛博朋克 2077》里承载 Johnny Silverhand 人格印记（en
 
 ## 快速开始
 
-前置：Node ≥ 20、Git。
+前置：Node ≥ 20、Git（Windows 一键包会替你装）。
+
+### Windows 一键部署（Release，推荐）
+
+1. 打开 [Releases](https://github.com/STHgs/relic/releases)，选最新版本，下载 `relic-setup.zip`；
+2. **解压前**右键 zip → 属性 → 勾选“解除锁定”（否则解压出的脚本会被 SmartScreen 拦）；
+3. 解压，双击 `relic-setup.cmd`；
+4. 脚本自动完成：检查 Node ≥ 20 与 Git（缺失则用 winget 安装）→ clone 引擎到
+   `%USERPROFILE%\relic` → `npm install` → 启动浏览器向导。任一步失败，窗口会停住显示原因，
+   不会闪退。
+
+向导结束后部署即完成；以后从开始菜单「relic 控制台」启动控制台（按需启动，关窗口即停，
+治理与 5 分钟同步照常）。升级引擎在控制台里点“升级”，或 `npm run upgrade -- --latest`。
+
+### 手动部署（Linux / WSL / macOS，或已有 Node 的 Windows）
 
 ```bash
 git clone https://github.com/STHgs/relic.git
@@ -35,11 +49,8 @@ cd relic
 ./install.sh          # Linux / WSL / macOS：装依赖 + 打开浏览器向导
 ```
 
-Windows：从 [Releases](https://github.com/STHgs/relic/releases) 下载 `relic-setup.zip`，
-**先右键 zip → 属性 → 勾选“解除锁定”**，再解压、双击 `relic-setup.cmd`（自动装 Node/Git、
-clone 引擎并启动同一向导）。或手动：
-
 ```powershell
+# Windows（PowerShell）
 git clone https://github.com/STHgs/relic.git
 cd "$env:USERPROFILE\relic"; npm install; npm run wizard
 ```
