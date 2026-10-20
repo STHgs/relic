@@ -46,6 +46,7 @@ CI 在 `main` push 与 PR 上跑同一条链，见 `.github/workflows/ci.yml`。
 - 提交信息：`type: 摘要`（feat / fix / docs / test / refactor / chore）。
 - 不提交机器专有信息：绝对路径、个人令牌、`relic.config.json`、`AGENTS.md`、`output/`（均已在 `.gitignore`）。
 - 新增适配器或模块时，同步补测试与文档，并在 PR 里说明验证矩阵。
+- `main` 已启用分支保护：禁止强推与删除，管理员同样受限；维护者仍可直接推送。「要求状态检查」未启用——实测它会连直推一起拦（`Required status check "gate" is expected`），与「维护者直推」的工作流冲突；PR 合并前请自行确认 `gate` 通过。
 
 ## 新增适配器
 
