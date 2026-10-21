@@ -14,9 +14,15 @@ import { join } from 'path';
 import { appendFileSync, mkdirSync } from 'fs';
 import { run } from './exec.mjs';
 
-/** harness 进程签名表（命令行特征，匹配大小写不敏感） */
-const HARNESS_SIGNATURES = {
-  dsh: ['@deepseek-ai/dsh', '@deepseek-ai\\dsh', 'dsh serve', 'dsh web'],
+/**
+ * harness 进程签名表（命令行特征，匹配大小写不敏感）。
+ * 注意 dsh 有两个发行形态：CLI（命令行含 @deepseek-ai/dsh 或 dsh serve/web）
+ * 与官方桌面版（Electron 进程，命令行是 `...\DeepSeek Harness.exe`）。
+ * 漏掉桌面版会让"只开桌面版"被判成无消费者，sync 静默跳过。
+ */
+export const HARNESS_SIGNATURES = {
+  dsh: ['@deepseek-ai/dsh', '@deepseek-ai\\dsh', 'dsh serve', 'dsh web',
+        'deepseek harness', 'dsh-desktop', 'dsh desktop'],
   opencode: ['opencode'],
   omo: ['omo.jsonc', 'oh-my-openagent', 'omo serve'],
   codex: ['codex', '.codex'],   // CLI/IDE/Desktop 全线（进程命令行含 codex 或 home 路径）

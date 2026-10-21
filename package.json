@@ -35,6 +35,7 @@
     "check:skeleton": "node scripts/tier4-skeleton.mjs",
     "init-sync": "node scripts/init-sync.mjs",
     "install-schedule": "node scripts/install-schedule.mjs",
+    "schedule": "node scripts/schedule.mjs",
     "bootstrap": "node scripts/bootstrap.mjs",
     "upgrade": "node scripts/upgrade.mjs",
     "cleanup-backups": "node scripts/cleanup-backups.mjs",

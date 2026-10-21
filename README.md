@@ -75,7 +75,8 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 | 升级引擎 | `npm run upgrade -- --tag <tag>`（或 `--latest`） |
 | 去治理（保留一切，可恢复） | `npm run uninstall -- --level uninject` |
 | 恢复治理 | `npm run uninstall -- --reinject` |
-| 停服务（含调度器） | `npm run uninstall -- --level deactivate` |
+| 查看/启停定时同步 | `npm run schedule -- --status` / `--enable` / `--disable`（三平台一致：systemd/cron/launchd/schtasks 四后端） |
+| 停服务（含调度器） | `npm run uninstall -- --level deactivate`（恢复：`npm run schedule -- --enable` 或重新部署） |
 | 完全卸载（先推送内容库，再删引擎/内容/habits；执行前确认） | `npm run uninstall -- --level full` |
 | 骨架门禁 | `npm run check:skeleton` |
 | 全量测试 | `npm test` |
@@ -119,6 +120,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 | push 被拒 | `gh auth refresh -h github.com -s repo,workflow` |
 | 端口 17777 被占 | 关掉旧向导；17777–17779 自动顺延 |
 | 自定义安装路径找不到 | 内容库 `harness-paths.json` 声明 > `DSH_HOME`/`OPENCODE_CONFIG`/`XDG_CONFIG_HOME` > 默认路径 |
+| 定时同步显示已禁用 / 不再自动部署 | `npm run schedule -- --status` 看后端与真实状态；`--enable` 收敛到启用（重新部署也会自动启用） |
 | Windows 调度器注册失败 | 管理员 PowerShell：先 `schtasks /Delete /TN relic-sync /F`，再在引擎 clone 重跑 `npm run install-schedule` |
 
 ## 开发

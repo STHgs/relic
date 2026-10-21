@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, rmSync, mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { gateCheck, probeSignature, gateLogPath, appendGateLog } from '../src/core/gate.mjs';
+import { gateCheck, probeSignature, gateLogPath, appendGateLog, HARNESS_SIGNATURES } from '../src/core/gate.mjs';
 
 // G4 hermetic（2026-10-09）：门控日志路径经 XDG_STATE_HOME（posix）/ LOCALAPPDATA（win32），
 // 指到临时目录 → 测试不写用户真实状态目录，也不再受"$HOME 只读"环境（沙箱）影响。
@@ -80,5 +80,18 @@ describe('G5: sync.mjs gate semantics (source-level contract)', () => {
     assert.match(src, /isTTY/);
     assert.match(src, /--no-gate/);
     assert.match(src, /gateCheck/);
+  });
+});
+
+describe('G6: dsh 发行形态覆盖（CLI + 官方桌面版）', () => {
+  it('dsh 签名包含桌面版进程特征', () => {
+    const sigs = HARNESS_SIGNATURES.dsh;
+    assert.ok(sigs.includes('deepseek harness'), '桌面版 Electron 进程命令行必须可识别');
+    assert.ok(sigs.includes('dsh-desktop'));
+  });
+  it('只命中桌面版签名时 gate 仍判定 dsh 在场', () => {
+    const r = gateCheck({ probe: (sig) => sig === 'deepseek harness' });
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.alive, ['dsh']);
   });
 });

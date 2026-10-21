@@ -28,8 +28,10 @@ export function run(cmd, args, opts = {}) {
   let finalArgs = args;
   let useShell = false;
   if (isWin) {
-    // 检查是否需要 shell（npm.cmd 等 .cmd 文件需要）
-    const needsShell = cmd.endsWith('.cmd') || cmd === 'npm' || cmd === 'npx' || cmd === 'schtasks' || cmd === 'wmic';
+    // 检查是否需要 shell（npm.cmd 等 .cmd 文件需要）。
+    // 注意：schtasks.exe 是普通可执行文件，shell 反而会破坏带引号的 /TR 参数
+    // （"wscript.exe \"C:\\...vbs\"" 会被 cmd 吞引号），因此不加 shell、直传 argv。
+    const needsShell = cmd.endsWith('.cmd') || cmd === 'npm' || cmd === 'npx' || cmd === 'wmic';
     if (needsShell) {
       useShell = true;
       finalCmd = [cmd, ...args.map(a => a.includes(' ') ? `"${a}"` : a)].join(' ');

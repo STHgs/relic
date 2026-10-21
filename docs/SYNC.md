@@ -75,6 +75,21 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && 
 `install-schedule.mjs` 在 darwin 下自动写并加载 `~/Library/LaunchAgents/dev.relic.sync.plist`
 （StartInterval=300，日志 `~/.relic-sync.log`）——无需手工。
 
+## 调度器状态与启停
+
+`npm run schedule -- --status` 输出后端与真实状态（installed / enabled / running），
+`--enable` / `--disable` 显式启停。`npm run install-schedule` 与重新部署都是**幂等收敛**：
+任务存在但被禁用时会被重新启用；退出码以真实 `enabled` 为准，不以命令返回码冒充成功。
+
+| 后端 | 状态来源 | 停用语义 |
+|---|---|---|
+| systemd | `systemctl --user show` 的 UnitFileState / ActiveState | `disable --now` |
+| cron（回退） | crontab 中带 `# relic-sync` 标记的行（兼容旧版无标记行） | 删除该行 |
+| launchd | plist 存在 + `launchctl print` + `print-disabled` 标记 | `bootout` + 持久 `disable` 标记 |
+| schtasks | `schtasks /Query /XML` 的 `<Enabled>` | `/Change /DISABLE` |
+
+`running` 为 `null` 表示该后端无法廉价判定运行态（cron/launchd/schtasks），不要当成 false。
+
 ## 一致性说明
 
 - 生成产物不入库：每次 sync 在本地 generate，产物是派生物。
@@ -86,7 +101,7 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && 
 "任一 harness 进程在场才执行"——dsh/opencode/omo 全不在场 = 无消费者 = 静默跳过
 （exit 0 + gate 日志一条）。**手动调用永远全量**（isTTY 直通）；`--no-gate` 可强制绕过。
 
-- 核心模块：`src/core/gate.mjs`（进程签名表 + 平台探测 posix=pgrep / win=wmic + 日志）
+- 核心模块：`src/core/gate.mjs`（进程签名表〔含 dsh CLI 与官方桌面版 `DeepSeek Harness.exe`〕+ 平台探测 posix=pgrep / win=wmic + 日志）
 - 日志：posix `~/.local/state/relic/sync-gate.log` / win `%LOCALAPPDATA%\relic\sync-gate.log`
 - 调度器只管定时，静默与门控都在 sync 内部完成
 - 探测失败保守放行（宁可空转不误跳同步）

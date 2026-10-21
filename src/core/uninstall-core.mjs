@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { run, userHome } from './exec.mjs';
 import { platformPaths } from './paths.mjs';
 import { shortcutFiles } from './console-service.mjs';
+import { createScheduler } from './scheduler.mjs';
 
 const HOME = userHome();
 const STATE_DIR = join(HOME, '.local', 'state', 'relic');
@@ -140,23 +141,21 @@ export async function deactivate(opts = {}) {
   const inj = await uninject(opts);
   const schedResults = [];
 
-  // Linux: systemd timer
-  if (process.platform !== 'win32') {
-    const r = run('systemctl', ['--user', 'disable', '--now', 'relic-sync.timer']);
-    schedResults.push({ platform: 'systemd', ok: r.ok, detail: r.ok ? 'disabled' : 'not found or already disabled' });
-  }
-  // Win: schtasks
-  if (process.platform === 'win32') {
-    const r = run('schtasks', ['/Change', '/TN', 'relic-sync', '/DISABLE']);
-    schedResults.push({ platform: 'schtasks', ok: r.ok, detail: r.ok ? 'disabled' : 'not found or already disabled' });
-  }
-  // macOS: launchd
-  if (process.platform === 'darwin') {
-    const plist = join(HOME, 'Library', 'LaunchAgents', 'com.relic.sync.plist');
-    if (existsSync(plist)) {
-      run('launchctl', ['unload', plist]);
-      schedResults.push({ platform: 'launchd', ok: true, detail: 'unloaded' });
-    }
+  // 调度器停用走统一抽象（四后端同一语义：systemd/cron/launchd/schtasks）。
+  // 历史缺陷：这里只处理 systemd 与 schtasks，cron 回退路径的定时行不会停，
+  // launchd 仅 unload（plist 留在 LaunchAgents，下次登录自动加载）。
+  try {
+    const engineRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+    const scheduler = createScheduler({ repo: engineRoot, home: HOME });
+    const r = scheduler.disable();
+    schedResults.push({
+      platform: r.status.backend,
+      ok: !r.status.enabled,
+      detail: r.status.enabled ? 'still enabled' : r.status.detail,
+    });
+    if (!r.status.enabled) log('调度器已停用；恢复：npm run schedule -- --enable（或重新部署）');
+  } catch (e) {
+    schedResults.push({ platform: 'unknown', ok: false, detail: e.message });
   }
 
   // 控制台快捷方式（按需启动产物；停服务即移除）

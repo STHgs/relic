@@ -17,6 +17,8 @@ import { giteeWhoami, giteeCreateRepo, giteeRepoExists, getProvider } from '../s
 import { listDeployed, uninject, reinject, deactivate, fullUninstall } from '../src/core/uninstall-core.mjs';
 import { ensureHabitsStore } from '../src/core/habits.mjs';
 import { upgradeSteps } from '../src/core/upgrade-core.mjs';
+import { createScheduler } from '../src/core/scheduler.mjs';
+import { platformPaths } from '../src/core/paths.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
@@ -199,31 +201,50 @@ async function* deployPipeline(config) {
   if (!syncR.ok) throw new Error(`sync 失败：${syncR.stderr}`);
   yield { step: 3, status: 'done', message: '治理规则已部署' };
 
-  // ── Step 4: 安装调度器 ──
+  // ── Step 4: 安装调度器（统一抽象：幂等收敛到 enabled，按真实状态报告） ──
   yield { step: 4, status: 'active', message: '安装调度器...' };
-  const schedR = run('node', [join(REPO, 'scripts', 'install-schedule.mjs')]);
-  yield { step: 4, status: schedR.ok ? 'done' : 'warn', message: schedR.ok ? '调度器已安装' : '调度器安装失败（可手动装）' };
+  const schedInstall = createScheduler({ repo: REPO, home: HOME }).install();
+  const schedStatus = schedInstall.status;
+  yield {
+    step: 4,
+    status: schedStatus.enabled ? 'done' : 'warn',
+    message: schedStatus.enabled
+      ? `调度器已启用（${schedStatus.backend}）`
+      : `调度器未启用（${schedStatus.backend}）：${schedStatus.detail}`,
+  };
 
   // Step 4b: 控制台快捷方式（方案 B 按需启动；失败不阻塞部署）
   const shortcutR = run('node', [join(REPO, 'scripts', 'console-shortcut.mjs')]);
 
   // ── Step 5: 验证 ──
   yield { step: 5, status: 'active', message: '验证部署...' };
-  const report = { platforms: [], scheduler: schedR.ok, consoleShortcut: shortcutR.ok };
-  const deployedPaths = [
-    { name: 'DSH', path: join(HOME, '.dsh', 'AGENTS.md') },
-    { name: 'OpenCode', path: join(HOME, '.config', 'opencode', 'AGENTS.md') },
-    { name: 'OMO', path: join(HOME, '.omo', 'omo.jsonc') },
-    { name: 'Codex', path: join(HOME, '.codex', 'AGENTS.md') },
+  const report = {
+    platforms: [],
+    scheduler: schedStatus.enabled,
+    schedulerDetail: schedStatus,
+    consoleShortcut: shortcutR.ok,
+  };
+  // 路径必须走声明链（harness-paths.json > env > 约定），不能硬编码 ~/.dsh 等：
+  // 自定义安装（如 Windows 声明 E:\DSH\home）会被误判为"未部署"。
+  const pp = platformPaths(HOME, { env: process.env });
+  const candidates = [
+    { name: 'DSH', dirs: pp.dsh, file: 'AGENTS.md' },
+    { name: 'OpenCode', dirs: pp.opencode, file: 'AGENTS.md' },
+    { name: 'OMO', dirs: pp.omo, file: 'omo.jsonc' },
+    { name: 'Codex', dirs: pp.codex, file: 'AGENTS.md' },
   ];
-  for (const p of deployedPaths) {
-    const exists = existsSync(p.path);
-    if (exists) {
-      const content = readFileSync(p.path, 'utf8');
+  for (const c of candidates) {
+    let found = null;
+    for (const dir of c.dirs) {
+      const candidatePath = dir.replace(/[\\/]+$/, '') + '/' + c.file;
+      if (existsSync(candidatePath)) { found = candidatePath; break; }
+    }
+    if (found) {
+      const content = readFileSync(found, 'utf8');
       const sentinel = content.includes('RELIC IS RUNNING');
-      report.platforms.push({ name: p.name, path: p.path, deployed: true, sentinel });
+      report.platforms.push({ name: c.name, path: found, deployed: true, sentinel });
     } else {
-      report.platforms.push({ name: p.name, path: p.path, deployed: false, sentinel: false });
+      report.platforms.push({ name: c.name, path: c.dirs[0] ? c.dirs[0].replace(/[\\/]+$/, '') + '/' + c.file : '', deployed: false, sentinel: false });
     }
   }
   const anyDeployed = report.platforms.some(p => p.deployed);
@@ -386,16 +407,16 @@ const server = createServer(async (req, res) => {
           modules: (doc.modules || []).length,
         };
       } catch { /* 未部署或解析失败 */ }
-      // 调度器状态
+      // 调度器状态（真实状态：禁用任务不能被当成 active）
       let scheduler = 'unknown';
-      if (process.platform !== 'win32') {
-        const r = run('systemctl', ['--user', 'is-active', 'relic-sync.timer']);
-        scheduler = r.ok && r.stdout.trim() === 'active' ? 'active' : 'inactive';
-      } else {
-        const r = run('schtasks', ['/Query', '/TN', 'relic-sync']);
-        scheduler = r.ok ? 'active' : 'inactive';
+      let schedulerDetail = null;
+      try {
+        schedulerDetail = createScheduler({ repo: REPO, home: HOME }).status();
+        scheduler = schedulerDetail.enabled ? 'active' : 'inactive';
+      } catch (e) {
+        schedulerDetail = { backend: 'unknown', installed: false, enabled: false, running: null, detail: e.message };
       }
-      json(res, 200, { deployed, lastSync, contentOverview, scheduler });
+      json(res, 200, { deployed, lastSync, contentOverview, scheduler, schedulerDetail });
     } catch (e) {
       json(res, 500, { error: e.message });
     }
