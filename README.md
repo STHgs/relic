@@ -73,6 +73,8 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 | 控制台（治理状态/升级/恢复/卸载，按需启动） | `npm run console` 或双击「relic 控制台」快捷方式；关闭窗口即停止（治理与 5 分钟同步不受影响） |
 | 查看治理状态（终端） | `npm run status`；`--json` 机器可读。显示每个 harness 是否已治理、是否有已安装未治理、内容是否过期、定时同步是否启用 |
 | 立即同步，不等 5 分钟 | `npm run sync` |
+| 立即合并本机学习提案 | `npm run habits:merge`；`--pending` 看各工作区待合并行数，`--add-root <路径>` 注册扫描根，`--dry-run` 预览 |
+| Windows 沙箱只读授权（Codex） | `npm run sandbox-access`（探测）；`-- --apply` 授权，`-- --revoke` 打印撤销命令 |
 | 升级引擎 | `npm run upgrade -- --tag <tag>`（或 `--latest`） |
 | 去治理（保留一切，可恢复） | `npm run uninstall -- --level uninject` |
 | 恢复治理 | `npm run uninstall -- --reinject` |

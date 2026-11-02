@@ -15,7 +15,10 @@ import { spawn } from 'child_process';
 import { run, userHome } from '../src/core/exec.mjs';
 import { giteeWhoami, giteeCreateRepo, giteeRepoExists, getProvider } from '../src/core/provider.mjs';
 import { listDeployed, uninject, reinject, deactivate, fullUninstall } from '../src/core/uninstall-core.mjs';
-import { ensureHabitsStore } from '../src/core/habits.mjs';
+import { ensureHabitsStore, readHabits, HABITS_FILE } from '../src/core/habits.mjs';
+import { mergeHabitProposals, countPendingProposals } from '../src/core/habits-ingest.mjs';
+import { planSandboxAccess, applySandboxAccess } from '../src/core/sandbox-access.mjs';
+import { HABITS_DIR } from '../src/core/habits.mjs';
 import { upgradeSteps } from '../src/core/upgrade-core.mjs';
 import { createScheduler } from '../src/core/scheduler.mjs';
 import { platformPaths } from '../src/core/paths.mjs';
@@ -435,7 +438,30 @@ const server = createServer(async (req, res) => {
       } catch (e) {
         platformStatus.error = e.message;
       }
-      json(res, 200, { deployed, lastSync, contentOverview, scheduler, schedulerDetail, ...platformStatus });
+      // 学习库（habits v3）：条数 + 待合并提案
+      let habits = { entries: 0, pending: 0, files: [] };
+      try {
+        const store = readHabits();
+        const pending = countPendingProposals();
+        habits = {
+          entries: store.entries.length,
+          pending: pending.total,
+          files: pending.files,
+          top: store.entries.slice(0, 3).map((e) => e.observation),
+          file: HABITS_FILE(),
+        };
+      } catch { /* 库不可读 */ }
+      // 沙箱只读访问（Windows + Codex；其他平台 applicable:false）
+      let sandbox = { applicable: false, reason: '未探测' };
+      try {
+        sandbox = planSandboxAccess({
+          dirs: [DEFAULT_CONTENT, HABITS_DIR()],
+          exec: (cmd, args) => run(cmd, args),
+        });
+      } catch (e) {
+        sandbox = { applicable: false, reason: e.message };
+      }
+      json(res, 200, { deployed, lastSync, contentOverview, scheduler, schedulerDetail, habits, sandbox, ...platformStatus });
     } catch (e) {
       json(res, 500, { error: e.message });
     }
@@ -469,6 +495,40 @@ const server = createServer(async (req, res) => {
       send({ type: 'error', message: e.message });
     }
     res.end();
+    return;
+  }
+
+  // ── POST /api/habits/merge（合并工作区提案；只写 HABITS_DIR） ──
+  if (url === '/api/habits/merge' && req.method === 'POST') {
+    try {
+      const r = mergeHabitProposals();
+      json(res, 200, { ok: true, applied: r.applied, hits: r.hits, rejected: r.rejected.length, evicted: r.evicted, scanned: r.scanned });
+    } catch (e) {
+      json(res, 500, { ok: false, reason: e.message });
+    }
+    return;
+  }
+
+  // ── POST /api/sandbox-access（Windows + Codex 只读授权；需用户点按钮确认） ──
+  if (url === '/api/sandbox-access' && req.method === 'POST') {
+    const body = await parseBody(req);
+    const action = body.action || 'check';
+    if (action !== 'check' && action !== 'grant') {
+      json(res, 400, { ok: false, reason: 'action 必须是 check 或 grant' });
+      return;
+    }
+    const dirs = [DEFAULT_CONTENT, HABITS_DIR()];
+    const exec = (cmd, args) => run(cmd, args);
+    try {
+      if (action === 'check') {
+        json(res, 200, { ok: true, plan: planSandboxAccess({ dirs, exec }) });
+        return;
+      }
+      const r = applySandboxAccess({ dirs, exec });
+      json(res, 200, { ok: r.ok, result: r });
+    } catch (e) {
+      json(res, 500, { ok: false, reason: e.message });
+    }
     return;
   }
 

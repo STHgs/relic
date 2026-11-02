@@ -278,7 +278,9 @@ body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;b
       </div>
       <div id="statusBanner"></div>
       <div id="statusPlatforms" style="margin-bottom:8px"></div>
-      <div id="statusScheduler" style="margin-bottom:12px"></div>
+      <div id="statusScheduler" style="margin-bottom:8px"></div>
+      <div id="statusHabits" style="margin-bottom:8px"></div>
+      <div id="statusSandbox" style="margin-bottom:12px"></div>
       <div style="display:flex; gap:8px; align-items:center">
         <button class="btn btn-primary" id="btnRedeploy" onclick="startRedeploy()">重新部署治理</button>
         <button class="btn btn-secondary" onclick="loadStatus()">刷新</button>
@@ -734,6 +736,78 @@ function renderStatus(d) {
     srow.appendChild(btn);
   }
   sched.appendChild(srow);
+
+  // 学习库（habits v3：agent 只写工作区提案，引擎合并）
+  const habitsBox = document.getElementById('statusHabits');
+  habitsBox.innerHTML = '';
+  const h = d.habits || { entries: 0, pending: 0 };
+  const hrow = document.createElement('div');
+  hrow.className = 'env-row';
+  hrow.innerHTML = `<div class="env-icon ${h.pending > 0 ? 'warn' : 'ok'}">${h.pending > 0 ? '⚠' : '✓'}</div>
+    <div class="env-name">学习库</div>
+    <div class="env-ver">已学 ${h.entries} 条
+      <span style="color:var(--muted);font-size:14px"> · 待合并提案 ${h.pending} 行</span></div>`;
+  if (h.pending > 0) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-install';
+    btn.textContent = '立即合并';
+    btn.onclick = () => mergeHabits(btn);
+    hrow.appendChild(btn);
+  }
+  habitsBox.appendChild(hrow);
+
+  // 沙箱只读访问（仅 Windows + Codex 会出现）
+  const sbox = document.getElementById('statusSandbox');
+  sbox.innerHTML = '';
+  const sb = d.sandbox || {};
+  if (sb.applicable) {
+    const need = !!sb.needsGrant;
+    const srow2 = document.createElement('div');
+    srow2.className = 'env-row';
+    const missing = (sb.dirs || []).filter((x) => x.exists && !x.granted).length;
+    srow2.innerHTML = `<div class="env-icon ${need ? 'warn' : 'ok'}">${need ? '⚠' : '✓'}</div>
+      <div class="env-name">Codex 沙箱可读</div>
+      <div class="env-ver">${sb.groupExists ? (need ? `${missing} 个目录未授权` : '已授权') : '本机未启用 Codex 沙箱'}
+        <div style="color:var(--muted);font-size:14px">${sb.reason || ''}</div></div>`;
+    if (need) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-install';
+      btn.textContent = '授予只读访问';
+      btn.onclick = () => grantSandbox(btn, sb);
+      srow2.appendChild(btn);
+    }
+    sbox.appendChild(srow2);
+  }
+}
+
+async function mergeHabits(btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/habits/merge', { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) alert(d.reason || '合并失败');
+    else if (d.applied === 0 && d.hits === 0) alert('没有可合并的提案（' + d.rejected + ' 行被拒绝）');
+  } catch (e) { alert('合并失败：' + e.message); }
+  btn.disabled = false;
+  loadStatus();
+}
+
+async function grantSandbox(btn, plan) {
+  // 授权是机器级 ACL 变更：先讲清必要性与边界，用户确认后才执行
+  const dirs = (plan.dirs || []).filter((x) => x.exists && !x.granted).map((x) => x.path).join('\n');
+  const msg = ['为什么需要：', plan.necessity, '', '将执行：', ...(plan.dirs || []).filter((x) => x.exists && !x.granted).map((x) => '  ' + x.command), '', '授权边界：', plan.boundary, '', '继续？'].join('\n');
+  if (!confirm(msg)) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/sandbox-access', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'grant' }),
+    });
+    const d = await r.json();
+    if (!d.ok) alert(d.reason || '授权失败');
+  } catch (e) { alert('授权失败：' + e.message); }
+  btn.disabled = false;
+  loadStatus();
 }
 
 async function enableScheduler(btn) {

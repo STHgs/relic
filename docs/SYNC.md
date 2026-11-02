@@ -105,6 +105,38 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && 
   内容未变时全部 skipped，不产生新备份。
 - **定时同步**：控制台对「已安装但被禁用」给出「启用定时同步」按钮，走统一调度器抽象的 `enable()`。
 
+## 学习库（habits）与沙箱
+
+习惯记忆不再由 agent 直接写 `~/.config/relic-habits/learned.yaml`——绝大多数 harness 的
+沙箱默认禁止工作区外写入，直写会让"自动学习"在安全设置下静默失效。改为提案-合并：
+
+```
+agent（可能在沙箱内）          引擎（未沙箱，sync 每 5 分钟）
+  追加一行 JSON  ──►  <workspace>/.relic/habits-proposals.jsonl
+                                     │ 只读扫描（扫描根注册表）
+                                     ▼
+                     校验 → 去重 → 合并 → learned.yaml（只写这里）
+```
+
+- **提案格式**（JSONL，追加一行）：
+  `{"event":"teach","type":"style|feedback|workflow|reference","observation":"…","evidence":"…"}`
+  或 `{"event":"hit","target":"<条目文本片段>"}`。
+- **扫描根**：`~/.config/relic-habits/sources.json`（机器级，不入内容库）；缺省探测
+  `~/AIworkspace`、`~/projects`、`~/code`、`~/dev`、`~/src`、`~/workspace` 中存在的目录。
+  扫描深度 3、每轮 ≤50 文件、单文件 ≤1 MB。
+- **安全阀**：每轮 ≤5 条新增、≤20 条命中；`evidence` 必填；非法行记审计不阻塞；
+  容量 30 照旧末位淘汰；`audit.log` 逐轮留痕。
+- **幂等**：按字节偏移续读（`ingest-state.json`，带前缀哈希——文件被截断/替换即归零重读）；
+  批次内重复投递只生效一次。
+- **命令**：`npm run habits:merge`（`--pending` / `--dry-run` / `--json` / `--add-root` / `--vacuum`）；
+  控制台「治理状态」页显示已学条数与待合并行数，并可一键合并。
+- **Windows + Codex 只读授权**：Codex 在 Windows 上以独立受限令牌（本地组
+  `CodexSandboxUsers`）运行，工作区外路径默认读不到 → 沙箱内的 Codex 读不了内容库
+  `modules/*.yaml` 与 `learned.yaml`。`npm run sandbox-access` 探测；`-- --apply` 在确认后
+  追加 `(OI)(CI)(RX)` 只读 ACE（只 `CodexSandboxUsers`、只这两个目录、只加不删）；
+  `-- --revoke` 打印撤销命令。Linux/mac 的沙箱不限制读取，DSH 是 `WRITE_RESTRICTED`
+  （只拦写）——都不需要这一步，脚本会明确报告"无需授权"。
+
 ## 一致性说明
 
 - 生成产物不入库：每次 sync 在本地 generate，产物是派生物。
