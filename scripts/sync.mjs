@@ -16,6 +16,7 @@ import { renderAgentsMd } from '../src/render/agents-md.mjs';
 import { loadProfile } from '../src/core/module-loader.mjs';
 import { buildProbePolicies, assertGolden, checkDeterminism } from '../src/core/skeleton.mjs';
 import { loadHabitsView } from '../src/core/habits.mjs';
+import { mergeHabitProposals } from '../src/core/habits-ingest.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -105,6 +106,22 @@ if (args.includes('--init-deploy')) {
   process.exit(0);
 }
 
+// ---- 习惯提案合并（habits v3）----
+// agent 只写工作区的 .relic/habits-proposals.jsonl；由本进程（未沙箱）读提案并合并进
+// ~/.config/relic-habits/learned.yaml。必须在骨架门禁 B 之前——B 的 inputSig 含本机
+// 习惯视图，本轮合并的新条目要在同一轮就参与渲染。
+let habitsMerge = null;
+if (!process.argv.includes('--no-habits')) {
+  try {
+    habitsMerge = mergeHabitProposals();
+    if (habitsMerge.applied > 0 || habitsMerge.hits > 0 || habitsMerge.rejected.length > 0) {
+      console.log(`[relic] habits: +${habitsMerge.applied} new, +${habitsMerge.hits} hits, ${habitsMerge.rejected.length} rejected, ${habitsMerge.evicted} evicted`);
+    }
+  } catch (e) {
+    console.error(`[relic] habits merge skipped: ${e.message}`);
+  }
+}
+
 // ---- 骨架门禁（generate 前拦截；原则：骨架静态，用户区提交触碰骨架=违法）----
 const GOLDEN_PATH = resolve(REPO_ROOT, 'tests/fixtures/golden-skeleton.md');
 const goldenText = readFileSync(GOLDEN_PATH, 'utf8');
@@ -158,7 +175,17 @@ if (result.ok) {
     const statePath = join(CONTENT_REPO, '.last-sync');
     try {
       const st = JSON.parse(readFileSync(statePath, 'utf8'));
-      writeFileSync(statePath, JSON.stringify({ ...st, ...skeletonState }, null, 2) + '\n');
+      const extra = { ...(skeletonState || {}) };
+      if (habitsMerge) {
+        extra.habits = {
+          applied: habitsMerge.applied,
+          hits: habitsMerge.hits,
+          rejected: habitsMerge.rejected.length,
+          evicted: habitsMerge.evicted,
+          files: habitsMerge.scanned,
+        };
+      }
+      writeFileSync(statePath, JSON.stringify({ ...st, ...extra }, null, 2) + '\n');
     } catch { /* 状态合并失败不致命 */ }
   }
   console.log(`[relic] sync OK — commit ${String(result.commit).slice(0, 8)}${result.pulled ? ' (pulled)' : ' (already current)'}; generated ${result.generated.length} file(s); skeleton gate A+B PASS`);

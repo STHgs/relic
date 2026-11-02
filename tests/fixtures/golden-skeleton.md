@@ -63,9 +63,9 @@
 ### 机制（你的职责极轻——重计算由 relic sync 每 5 分钟离线完成）
 
 1. **收尾二值自省**（每轮，无工具调用）：问自己"本轮我是否因用户偏好调整了输出方式"。否 → 跳过全部记忆动作。
-2. **有感轮写入**（仅自省为"是"的轮次）：向 `~/.config/relic-habits/learned.yaml` 写入/更新一条——判据：对未来有用 且 ①助手人设未覆盖 ②环境推不出。字段：type（style|feedback|workflow|reference）/observation/evidence/recorded/hits/lastHit。同主题新偏好覆盖旧条目（updatedFrom 标注）。
-3. **顺手 hits 更新**：本轮实际运用了头部某条偏好 → 该条 hits+1、lastHit=今天。
-4. **全库按需检索**：会话中涉及记忆主题时可 Read 全库（上层头部已常驻注入，通常无需全读）。
+2. **有感轮写入**（仅自省为"是"的轮次）：向**当前工作区**的 `.relic/habits-proposals.jsonl` 追加一行 JSON——`{"event":"teach","type":"style|feedback|workflow|reference","observation":"≤200字","evidence":"依据"}`。判据：对未来有用 且 ①助手人设未覆盖 ②环境推不出。不要写工作区外的文件（沙箱常态下会被拒绝）；合并由 relic sync 每 5 分钟完成。
+3. **顺手 hits 更新**：本轮实际运用了头部某条偏好 → 追加 `{"event":"hit","target":"<该条文本片段>"}`（同一提案文件，同样只写工作区）。
+4. **全库按需检索**：会话中涉及记忆主题时可 Read `~/.config/relic-habits/learned.yaml`（只读；若被沙箱拒绝，报告用户执行 `npm run sandbox-access -- --apply`）。
 5. **固化照指令执行**：若下方出现「固化申请指令」——按其点名条目向用户申请（一句话确认），确认后写入同步库 personas.directives 并 commit+push，同时删除 habit 库对应条目。
 6. 优先级：助手人设（声明层）> 本 session 新学习 > 历史学习条目。
 

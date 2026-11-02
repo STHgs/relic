@@ -43,7 +43,9 @@
     "wizard": "node scripts/wizard.mjs",
     "console": "node scripts/console.mjs",
     "console:shortcut": "node scripts/console-shortcut.mjs",
-    "uninstall": "node scripts/uninstall.mjs"
+    "uninstall": "node scripts/uninstall.mjs",
+    "habits:merge": "node scripts/habits-merge.mjs",
+    "sandbox-access": "node scripts/sandbox-access.mjs"
   },
   "dependencies": {
     "ajv": "8.20.0",

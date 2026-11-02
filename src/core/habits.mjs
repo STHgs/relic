@@ -76,6 +76,8 @@ export function migrateEntries(entries) {
     hits: typeof e.hits === 'number' ? e.hits : 1,
     lastHit: e.lastHit || e.recorded || new Date().toISOString().slice(0, 10),
     ...(e.updatedFrom ? { updatedFrom: e.updatedFrom } : {}),
+    ...(e.source ? { source: e.source } : {}),
+    ...(e.mergedAt ? { mergedAt: e.mergedAt } : {}),
   }));
 }
 
@@ -215,37 +217,58 @@ export function loadHabitsView(opts = {}) {
 // ─── 矛盾消解（Q7：新覆盖旧） ──────────────────────────────────────────
 
 /**
- * 简易语义近似：观察文本的 token 重叠率 ≥ 阈值视为同主题冲突。
+ * 简易语义近似：观察文本的词面重叠视为同主题冲突。
  * （纯提示词架构无嵌入模型——用词面重叠做保守近似，宁漏判不误杀）
+ * 两层：①空白分词重叠率（西文）②字符 bigram Jaccard（中文无空格，词面法失效）
  * @param {string} a
  * @param {string} b
  * @returns {boolean}
  */
-function similarText(a, b) {
-  const ta = new Set(String(a).toLowerCase().split(/\s+/).filter((w) => w.length > 1));
-  const tb = new Set(String(b).toLowerCase().split(/\s+/).filter((w) => w.length > 1));
-  if (ta.size === 0 || tb.size === 0) return false;
-  let overlap = 0;
-  for (const w of ta) if (tb.has(w)) overlap++;
-  return overlap / Math.min(ta.size, tb.size) >= 0.5;
+export function similarText(a, b) {
+  const tokens = (s) => new Set(String(s).toLowerCase().split(/\s+/).filter((w) => w.length > 1));
+  const ta = tokens(a);
+  const tb = tokens(b);
+  if (ta.size > 0 && tb.size > 0) {
+    let overlap = 0;
+    for (const w of ta) if (tb.has(w)) overlap++;
+    if (overlap / Math.min(ta.size, tb.size) >= 0.5) return true;
+  }
+  const bigrams = (s) => {
+    const chars = [...String(s).toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '')];
+    const set = new Set();
+    for (let i = 0; i < chars.length - 1; i++) set.add(chars[i] + chars[i + 1]);
+    return set;
+  };
+  const ba = bigrams(a);
+  const bb = bigrams(b);
+  if (ba.size === 0 || bb.size === 0) return false;
+  let inter = 0;
+  for (const g of ba) if (bb.has(g)) inter++;
+  const union = ba.size + bb.size - inter;
+  const jaccard = union > 0 ? inter / union : 0;
+  const containment = inter / Math.min(ba.size, bb.size);   // 一条是另一条的扩写/改写
+  return jaccard >= 0.5 || containment >= 0.75;
 }
 
 /**
  * 写入新条目（含矛盾消解 + 容量淘汰）。
  * 冲突：与现有条目观察文本相似 → 新条目覆盖旧条目（updatedFrom 标注旧观察）。
  * @param {{entries: object[]}} data
- * @param {object} newEntry {type, observation, evidence}
+ * @param {object} newEntry {type, observation, evidence, recorded?}
+ * @param {{source?:string, mergedAt?:string, today?:string}} [meta] 来源留痕（提案合并时传入）
  * @returns {{entries: object[], replaced: object|null, evicted: object[]}}
  */
-export function addEntry(data, newEntry) {
-  const today = new Date().toISOString().slice(0, 10);
+export function addEntry(data, newEntry, meta = {}) {
+  const today = meta.today || new Date().toISOString().slice(0, 10);
   const entry = {
     type: newEntry.type || 'style',
     observation: newEntry.observation || '',
     evidence: newEntry.evidence || '',
-    recorded: today,
+    recorded: newEntry.recorded && /^\d{4}-\d{2}-\d{2}$/.test(newEntry.recorded) ? newEntry.recorded : today,
     hits: 1,
     lastHit: today,
+    ...(meta.source ? { source: meta.source } : {}),
+    ...(meta.mergedAt ? { mergedAt: meta.mergedAt } : {}),
   };
 
   let entries = [...(data.entries || [])];
@@ -266,6 +289,27 @@ export function addEntry(data, newEntry) {
   return { entries: kept, replaced, evicted };
 }
 
+// ─── 命中登记（提案 hit 事件——agent 只投递，引擎落账） ──────────────────
+
+/**
+ * 给已存在条目 +1（按观察文本近似匹配）。未命中返回 matched:false（调用方记审计）。
+ * @param {object[]} entries
+ * @param {string} target 条目文本片段
+ * @param {string} [today]
+ * @returns {{entries: object[], matched: boolean, index: number}}
+ */
+export function registerHit(entries, target, today = new Date().toISOString().slice(0, 10)) {
+  const list = entries || [];
+  const t = String(target || '').trim();
+  if (t.length < 4) return { entries: list, matched: false, index: -1 };
+  let idx = list.findIndex((e) => String(e.observation || '').includes(t));
+  if (idx === -1) idx = list.findIndex((e) => similarText(e.observation, t));
+  if (idx === -1) return { entries: list, matched: false, index: -1 };
+  const next = [...list];
+  next[idx] = { ...next[idx], hits: (next[idx].hits || 1) + 1, lastHit: today };
+  return { entries: next, matched: true, index: idx };
+}
+
 // ─── 预创建（部署管线调用——治"不存在报错"Q5） ──────────────────────────
 
 /**
@@ -282,9 +326,10 @@ export function ensureHabitsStore() {
 
 function serializeHabitsYaml(data) {
   const lines = [
-    '# relic 学习库 v2（L3）——本机 agent 自主维护，不入 git，上限 30 条',
+    '# relic 学习库 v3（L3）——由未沙箱的引擎合并写入（agent 只投递工作区提案），不入 git，上限 30 条',
     '# 优先级：助手人设（声明层）> 本 session 新学习 > 本文件历史条目',
     '# 字段：hits=命中次数 lastHit=最近命中（衰减排序依据）updatedFrom=矛盾覆盖溯源',
+    '#       source=提案来源（workspace:<路径> | direct）mergedAt=合并时刻',
     'entries:',
   ];
   for (const e of data.entries || []) {
@@ -295,6 +340,8 @@ function serializeHabitsYaml(data) {
     lines.push(`    hits: ${e.hits || 1}`);
     lines.push(`    lastHit: ${e.lastHit || e.recorded}`);
     if (e.updatedFrom) lines.push(`    updatedFrom: ${e.updatedFrom}`);
+    if (e.source) lines.push(`    source: ${e.source}`);
+    if (e.mergedAt) lines.push(`    mergedAt: ${e.mergedAt}`);
   }
   if ((data.entries || []).length === 0) lines.push('  []');
   return lines.join('\n') + '\n';

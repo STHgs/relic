@@ -62,7 +62,11 @@ describe('P3: mechanism skeleton directives (v2)', () => {
   it('names the learned store path', () => assert.match(md, /~\/\.config\/relic-habits\/learned\.yaml/));
   it('binary self-check directive present', () => assert.match(md, /收尾二值自省/));
   it('event-driven write gate skips declared/derivable', () => assert.match(md, /助手人设未覆盖 ②环境推不出/));
-  it('hits update directive', () => assert.match(md, /hits\+1/));
+  it('hits update directive (v3: hit event appended to workspace proposal)', () => assert.match(md, /"event":"hit"/));
+  it('teach directive writes to the workspace proposal spool (never outside workspace)', () => {
+    assert.match(md, /\.relic\/habits-proposals\.jsonl/);
+    assert.match(md, /不要写工作区外的文件/);
+  });
   it('on-demand full store read', () => assert.match(md, /按需检索|Read 全库/));
   it('solidify follows rendered instruction', () => assert.match(md, /固化照指令执行/));
   it('states priority order', () => assert.match(md, /助手人设（声明层）> 本 session 新学习 > 历史学习条目/));
