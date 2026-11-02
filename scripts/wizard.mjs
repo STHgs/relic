@@ -227,7 +227,7 @@ async function* deployPipeline(config) {
     consoleShortcut: shortcutR.ok,
   };
   // 路径必须走声明链（harness-paths.json > env > 约定），不能硬编码 ~/.dsh 等：
-  // 自定义安装（如 Windows 声明 E:\DSH\home）会被误判为"未部署"。
+  // 自定义安装（把 harness 装到非默认目录并写进声明层）会被误判为"未部署"。
   const pp = platformPaths(HOME, { env: process.env });
   const candidates = [
     { name: 'DSH', dirs: pp.dsh, file: 'AGENTS.md' },
