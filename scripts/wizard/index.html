@@ -279,8 +279,7 @@ body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;b
       <div id="statusBanner"></div>
       <div id="statusPlatforms" style="margin-bottom:8px"></div>
       <div id="statusScheduler" style="margin-bottom:8px"></div>
-      <div id="statusHabits" style="margin-bottom:8px"></div>
-      <div id="statusSandbox" style="margin-bottom:12px"></div>
+      <div id="statusHabits" style="margin-bottom:12px"></div>
       <div style="display:flex; gap:8px; align-items:center">
         <button class="btn btn-primary" id="btnRedeploy" onclick="startRedeploy()">重新部署治理</button>
         <button class="btn btn-secondary" onclick="loadStatus()">刷新</button>
@@ -689,18 +688,38 @@ async function loadStatus() {
 function renderStatus(d) {
   const list = document.getElementById('statusPlatforms');
   list.innerHTML = '';
+  const sb = d.sandbox || {};
+  let codexRowSeen = false;
   for (const p of d.platforms || []) {
     const meta = STATUS_META[p.status] || STATUS_META.absent;
     const row = document.createElement('div');
     row.className = 'env-row';
     const declaredNote = (p.declaredPath && !p.declaredExists)
       ? `<div style="color:var(--err);font-size:13px">声明路径失效：${p.declaredPath}</div>` : '';
+    // Codex 专用：沙箱只读访问并入本行（Windows 才有该概念）
+    const isCodex = /^codex$/i.test(p.name || '');
+    const missingDirs = (sb.dirs || []).filter((x) => x.exists && !x.granted);
+    let sandboxNote = '';
+    if (isCodex && sb.applicable) {
+      codexRowSeen = true;
+      const state = !sb.groupExists
+        ? '本机未启用 Codex 沙箱，无需授权'
+        : (sb.needsGrant ? `${missingDirs.length} 个目录未授权（沙箱内读不到规则/习惯库）` : '已授权');
+      sandboxNote = `<div style="color:${sb.needsGrant && sb.groupExists ? 'var(--warn)' : 'var(--muted)'};font-size:13px">沙箱只读访问：${state}</div>`;
+    }
     row.innerHTML = `
       <div class="env-icon ${meta.cls}">${meta.icon}</div>
       <div class="env-name">${p.name}</div>
       <div class="env-ver">${p.target || '—'}
-        <div style="color:var(--muted);font-size:14px">${meta.text}</div>${declaredNote}
+        <div style="color:var(--muted);font-size:14px">${meta.text}</div>${declaredNote}${sandboxNote}
       </div>`;
+    if (isCodex && sb.applicable && sb.needsGrant) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-install';
+      btn.textContent = '授予沙箱只读访问';
+      btn.onclick = () => grantSandbox(btn, sb);
+      row.appendChild(btn);
+    }
     list.appendChild(row);
   }
 
@@ -756,28 +775,14 @@ function renderStatus(d) {
   }
   habitsBox.appendChild(hrow);
 
-  // 沙箱只读访问（仅 Windows + Codex 会出现）
-  const sbox = document.getElementById('statusSandbox');
-  sbox.innerHTML = '';
-  const sb = d.sandbox || {};
-  if (sb.applicable) {
-    const need = !!sb.needsGrant;
-    const srow2 = document.createElement('div');
-    srow2.className = 'env-row';
-    const missing = (sb.dirs || []).filter((x) => x.exists && !x.granted).length;
-    srow2.innerHTML = `<div class="env-icon ${need ? 'warn' : 'ok'}">${need ? '⚠' : '✓'}</div>
-      <div class="env-name">Codex 沙箱可读</div>
-      <div class="env-ver">${sb.groupExists ? (need ? `${missing} 个目录未授权` : '已授权') : '本机未启用 Codex 沙箱'}
-        <div style="color:var(--muted);font-size:14px">${sb.reason || ''}</div></div>`;
-    if (need) {
-      const btn = document.createElement('button');
-      btn.className = 'btn-install';
-      btn.textContent = '授予只读访问';
-      btn.onclick = () => grantSandbox(btn, sb);
-      srow2.appendChild(btn);
-    }
-    sbox.appendChild(srow2);
+  // Codex 未部署时若仍需授权，提到横幅里（否则没人看得见）
+  if (sb.applicable && sb.needsGrant && !codexRowSeen) {
+    banner.innerHTML += `<div class="error-banner show">⚠ Codex 沙箱只读访问未授权：${missingDirsText(sb)}</div>`;
   }
+}
+
+function missingDirsText(sb) {
+  return (sb.dirs || []).filter((x) => x.exists && !x.granted).map((x) => x.path).join('、');
 }
 
 async function mergeHabits(btn) {
@@ -794,7 +799,6 @@ async function mergeHabits(btn) {
 
 async function grantSandbox(btn, plan) {
   // 授权是机器级 ACL 变更：先讲清必要性与边界，用户确认后才执行
-  const dirs = (plan.dirs || []).filter((x) => x.exists && !x.granted).map((x) => x.path).join('\n');
   const msg = ['为什么需要：', plan.necessity, '', '将执行：', ...(plan.dirs || []).filter((x) => x.exists && !x.granted).map((x) => '  ' + x.command), '', '授权边界：', plan.boundary, '', '继续？'].join('\n');
   if (!confirm(msg)) return;
   btn.disabled = true;
