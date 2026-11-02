@@ -3,13 +3,15 @@
 // "modules/?/..." 占位，导致与真实产物误判为"内容过期"，并让再部署写出错误路径。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pipeline } from '../src/index.mjs';
 
 function tmpHome() {
-  return mkdtempSync(join(tmpdir(), 'relic-rt-'));
+  const home = mkdtempSync(join(tmpdir(), 'relic-rt-'));
+  mkdirSync(join(home, '.dsh'));   // 让 dsh 适配器 detect 为真（CI 无真实 home 布局）
+  return home;
 }
 
 test('RT1: 传 runtimeRoot → 索引表用该根拼工作流路径', async () => {
