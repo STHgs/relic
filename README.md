@@ -70,7 +70,8 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 
 | 目的 | 命令 |
 |---|---|
-| 控制台（状态/恢复/升级/卸载，按需启动） | `npm run console` 或双击「relic 控制台」快捷方式；关闭窗口即停止（治理与 5 分钟同步不受影响） |
+| 控制台（治理状态/升级/恢复/卸载，按需启动） | `npm run console` 或双击「relic 控制台」快捷方式；关闭窗口即停止（治理与 5 分钟同步不受影响） |
+| 查看治理状态（终端） | `npm run status`；`--json` 机器可读。显示每个 harness 是否已治理、是否有已安装未治理、内容是否过期、定时同步是否启用 |
 | 立即同步，不等 5 分钟 | `npm run sync` |
 | 升级引擎 | `npm run upgrade -- --tag <tag>`（或 `--latest`） |
 | 去治理（保留一切，可恢复） | `npm run uninstall -- --level uninject` |
@@ -106,7 +107,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 
 - **改规则/人设**：编辑 `~/.config/relic-sync/` 下内容 → commit + push → 5 分钟全域生效。
 - **急用**：在引擎 clone 跑 `npm run sync`。
-- **控制台**：`npm run console` 按需启动（已在运行则只开浏览器）；关窗口即停止，治理与定时同步照常。
+- **控制台**：`npm run console` 按需启动（已在运行则只开浏览器）；关窗口即停止，治理与定时同步照常。状态页可直接「重新部署治理」「启用定时同步」。
 - **加规则/流程**：直接说需求，触发 `add-permission` / `add-workflow` 对话流程。
 - **固化偏好**：说“记住……”，agent 会申请写入 `personas.directives`（全域生效）。
 
@@ -121,6 +122,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 | 端口 17777 被占 | 关掉旧向导；17777–17779 自动顺延 |
 | 自定义安装路径找不到 | 内容库 `harness-paths.json` 声明 > `DSH_HOME`/`OPENCODE_CONFIG`/`XDG_CONFIG_HOME` > 默认路径 |
 | 定时同步显示已禁用 / 不再自动部署 | `npm run schedule -- --status` 看后端与真实状态；`--enable` 收敛到启用（重新部署也会自动启用） |
+| 新装了 harness（如桌面版）但治理没跟上 | `npm run status` 确认「已检测未治理」；控制台状态页点「重新部署治理」，或 `npm run sync -- --no-gate` |
 | Windows 调度器注册失败 | 管理员 PowerShell：先 `schtasks /Delete /TN relic-sync /F`，再在引擎 clone 重跑 `npm run install-schedule` |
 
 ## 开发

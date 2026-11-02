@@ -26,6 +26,7 @@ const validate = createValidator();
  * @property {string} [home]          HOME 目录
  * @property {string} [profile]       profile id（方向 3）；若 manifest 有 profiles 段且未传则用 default
  * @property {string} [modulesDir]    modules/ 目录（默认 <manifestDir>/modules）
+ * @property {string} [runtimeRoot]   工作流路径根（渲染索引表用；generate CLI 传 manifest 目录，程序化调用方应显式传）
  */
 
 /**
@@ -36,7 +37,7 @@ const validate = createValidator();
  * @returns {Promise<{ok:boolean, stage:string, errors?:string[], fileMaps?:object, report?:object, policies?:object}>}
  */
 export async function pipeline(opts) {
-  const { policiesPath, dryRun = false, home = process.env.HOME, profile, modulesDir } = opts;
+  const { policiesPath, dryRun = false, home = process.env.HOME, profile, modulesDir, runtimeRoot } = opts;
 
   // 分支：检测 manifest 是否有 profiles 段
   let policies;
@@ -63,6 +64,8 @@ export async function pipeline(opts) {
 
   // 本机习惯视图（纯度不变量）：与 generate CLI 同点注入——渲染器只吃显式输入
   if (policies.meta) policies.meta.habits = loadHabitsView();
+  // 工作流绝对路径根：与 generate CLI 一致（默认取 manifest 所在目录）
+  if (policies.meta && runtimeRoot !== undefined) policies.meta.runtimeRoot = runtimeRoot;
 
   // generate (and install if not dryRun)
   const g = await generate(policies, { home, dryRun });

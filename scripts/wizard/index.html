@@ -268,11 +268,30 @@ body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;b
       </div>
     </div>
 
+    <!-- 治理状态（部署后默认画面） -->
+    <div class="screen hidden" id="scr-status">
+      <div class="tabs">
+        <div class="tab active" style="cursor:pointer" onclick="showScreen('status')">治理状态</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
+      </div>
+      <div id="statusBanner"></div>
+      <div id="statusPlatforms" style="margin-bottom:8px"></div>
+      <div id="statusScheduler" style="margin-bottom:12px"></div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <button class="btn btn-primary" id="btnRedeploy" onclick="startRedeploy()">重新部署治理</button>
+        <button class="btn btn-secondary" onclick="loadStatus()">刷新</button>
+      </div>
+      <div class="log-box hidden" id="redeployLog" style="max-height:100px"></div>
+    </div>
+
     <!-- 升级 -->
     <div class="screen hidden" id="scr-upgrade">
       <div class="tabs">
-        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('status')">治理状态</div>
         <div class="tab active" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
         <div class="tab" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
       </div>
       <div class="version-row">
@@ -287,8 +306,9 @@ body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;b
     <!-- 恢复治理 -->
     <div class="screen hidden" id="scr-restore">
       <div class="tabs">
-        <div class="tab active" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('status')">治理状态</div>
         <div class="tab" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab active" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
         <div class="tab" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
       </div>
       <h2 style="font-size:16px; margin-bottom:8px">恢复治理</h2>
@@ -302,8 +322,9 @@ body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;b
     <!-- 卸载 -->
     <div class="screen hidden" id="scr-uninstall">
       <div class="tabs">
-        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('status')">治理状态</div>
         <div class="tab" style="cursor:pointer" onclick="showScreen('upgrade')">升级</div>
+        <div class="tab" style="cursor:pointer" onclick="showScreen('restore')">恢复治理</div>
         <div class="tab active" style="cursor:pointer" onclick="showScreen('uninstall')">卸载</div>
       </div>
       <h2 style="font-size:16px; margin-bottom:8px">当前部署</h2>
@@ -394,10 +415,9 @@ async function init() {
     list.appendChild(row);
   }
 
-  // 已部署 → 直接跳到升级界面
+  // 已部署 → 默认进入治理状态（新装 harness 的发现与再部署入口）
   if (alreadyDeployed) {
-    showScreen('upgrade');
-    loadVersion();
+    showScreen('status');
     return;
   }
   showScreen('env');
@@ -410,7 +430,8 @@ const SCREENS = {
   token:     { stepper: true,  buttons: ['prev','next'], stepNum: 3 },
   deploy:    { stepper: true,  buttons: [],               stepNum: 4 },
   done:      { stepper: true,  buttons: ['done'],         stepNum: 5 },
-  upgrade:   { stepper: false, buttons: ['upgrade'],      label: '版本升级' },
+  status:    { stepper: false, buttons: [],               label: '治理状态', onLoad: 'loadStatus' },
+  upgrade:   { stepper: false, buttons: ['upgrade'],      label: '版本升级', onLoad: 'loadVersion' },
   uninstall: { stepper: false, buttons: ['uninstall'],   label: '卸载',  onLoad: 'loadDeployed' },
   restore:   { stepper: false, buttons: ['restore'],     label: '恢复治理', onLoad: 'loadRestoreStatus' },
 };
@@ -468,6 +489,7 @@ function updateTabsActive(name) {
   document.querySelectorAll('.tabs .tab').forEach(t => {
     const txt = t.textContent.trim();
     const isActive =
+      (name === 'status'    && txt.includes('治理状态')) ||
       (name === 'upgrade'   && txt.includes('升级')) ||
       (name === 'uninstall' && txt.includes('卸载')) ||
       (name === 'restore'   && txt.includes('恢复治理'));
@@ -642,6 +664,132 @@ function renderReport(report) {
     item.innerHTML = `<span class="check">✓</span> 调度器<span style="color:var(--muted);font-size:11px;margin-left:auto">每 5 分钟自动同步</span>`;
     grid.appendChild(item);
   }
+}
+
+// ─── 治理状态（部署后默认画面） ──────────────────────────────────
+const STATUS_META = {
+  governed:   { icon: '✓', cls: 'ok',   text: '已治理' },
+  stale:      { icon: '⚠', cls: 'warn', text: '已过期（待同步）' },
+  ungoverned: { icon: '⚠', cls: 'warn', text: '已检测未治理' },
+  absent:     { icon: '—', cls: 'opt',  text: '未检测到安装' },
+};
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    renderStatus(await r.json());
+  } catch (e) {
+    document.getElementById('statusBanner').innerHTML =
+      `<div class="error-banner show">状态读取失败：${e.message}</div>`;
+  }
+}
+
+function renderStatus(d) {
+  const list = document.getElementById('statusPlatforms');
+  list.innerHTML = '';
+  for (const p of d.platforms || []) {
+    const meta = STATUS_META[p.status] || STATUS_META.absent;
+    const row = document.createElement('div');
+    row.className = 'env-row';
+    const declaredNote = (p.declaredPath && !p.declaredExists)
+      ? `<div style="color:var(--err);font-size:13px">声明路径失效：${p.declaredPath}</div>` : '';
+    row.innerHTML = `
+      <div class="env-icon ${meta.cls}">${meta.icon}</div>
+      <div class="env-name">${p.name}</div>
+      <div class="env-ver">${p.target || '—'}
+        <div style="color:var(--muted);font-size:14px">${meta.text}</div>${declaredNote}
+      </div>`;
+    list.appendChild(row);
+  }
+
+  // 横幅：未治理 / 过期 / 调度器停用
+  const issues = [];
+  for (const p of d.platforms || []) {
+    if (p.status === 'ungoverned') issues.push(`${p.name} 已安装但尚未部署治理（${p.target}）`);
+    else if (p.status === 'stale') issues.push(`${p.name} 的治理文本早于上次同步，建议重新部署`);
+  }
+  const s = d.schedulerDetail || {};
+  if (s.installed === false) issues.push('未安装定时同步任务');
+  else if (s.enabled === false) issues.push('定时同步任务已被禁用，5 分钟自动同步不会运行');
+  const banner = document.getElementById('statusBanner');
+  banner.innerHTML = issues.length
+    ? `<div class="error-banner show">⚠ ${issues.join('<br>⚠ ')}</div>`
+    : '';
+
+  // 调度器行 + 启用按钮
+  const sched = document.getElementById('statusScheduler');
+  sched.innerHTML = '';
+  const srow = document.createElement('div');
+  srow.className = 'env-row';
+  const ok = s.installed && s.enabled;
+  srow.innerHTML = `<div class="env-icon ${ok ? 'ok' : 'err'}">${ok ? '✓' : '✗'}</div>
+    <div class="env-name">定时同步</div>
+    <div class="env-ver">${s.installed ? (s.enabled ? '已启用' : '已安装但被禁用') : '未安装'}
+      <span style="color:var(--muted);font-size:14px"> · ${s.backend || 'unknown'}</span></div>`;
+  if (!ok) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-install';
+    btn.textContent = '启用定时同步';
+    btn.onclick = () => enableScheduler(btn);
+    srow.appendChild(btn);
+  }
+  sched.appendChild(srow);
+}
+
+async function enableScheduler(btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/scheduler', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'enable' }),
+    });
+    const d = await r.json();
+    if (!d.ok) alert(d.reason || '启用失败');
+  } catch (e) { alert('启用失败：' + e.message); }
+  btn.disabled = false;
+  loadStatus();
+}
+
+async function startRedeploy() {
+  const btn = document.getElementById('btnRedeploy');
+  const logBox = document.getElementById('redeployLog');
+  btn.disabled = true;
+  logBox.classList.remove('hidden');
+  logBox.innerHTML = '';
+  const log = (text, cls = '') => {
+    const el = document.createElement('div');
+    el.className = 'log-line ' + cls;
+    el.textContent = text;
+    logBox.appendChild(el);
+    logBox.scrollTop = logBox.scrollHeight;
+  };
+  try {
+    const resp = await fetch('/api/redeploy', { method: 'POST' });
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = JSON.parse(line.slice(6));
+        if (data.type === 'error') log('✗ ' + data.message, 'err');
+        else if (data.type === 'step') log('… ' + data.message);
+        else if (data.type === 'done') {
+          const r = data.report || {};
+          log(`✓ 部署完成：写入 ${r.writtenCount} 处，跳过 ${r.skipped.length}，错误 ${r.errors.length}`, 'ok');
+        }
+      }
+    }
+  } catch (e) {
+    log('✗ ' + e.message, 'err');
+  }
+  btn.disabled = false;
+  loadStatus();
 }
 
 // ─── 升级 ────────────────────────────────────────────────────────

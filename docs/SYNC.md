@@ -90,6 +90,21 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && 
 
 `running` 为 `null` 表示该后端无法廉价判定运行态（cron/launchd/schtasks），不要当成 false。
 
+## 治理状态与再部署（自愈）
+
+部署完成后新装一个 harness（或官方桌面版首次运行、自建配置目录）不会自动被治理——
+它需要重新探测与再部署。这条链路只读探测 + 一次性重放，不改身份与内容库：
+
+- **状态探测**：`src/core/platform-status.mjs` 对每个平台给出 `已治理 / 已过期 / 已检测未治理 / 未检测`，
+  附实际写入路径与声明来源；内容库 `harness-paths.json` 声明的路径不存在时单独告警（不自动改写内容库）。
+- **过期判定**：把当前产物与本次 dry-run 渲染结果逐字节对比；一致即视为最新。
+  不用文件 mtime——内容未变时 sync 不写盘，按时间判会误报。
+- **查看**：`npm run status`（`--json` 机器可读）；控制台「治理状态」页与它同源。
+- **再部署**：控制台「重新部署治理」或 `POST /api/redeploy`，内部调用 `pipeline()` 走
+  generate + install（与 `npm run sync` 的部署段相同），**不动**身份、内容库、调度器；
+  内容未变时全部 skipped，不产生新备份。
+- **定时同步**：控制台对「已安装但被禁用」给出「启用定时同步」按钮，走统一调度器抽象的 `enable()`。
+
 ## 一致性说明
 
 - 生成产物不入库：每次 sync 在本地 generate，产物是派生物。

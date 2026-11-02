@@ -19,7 +19,7 @@ import { userHome } from './exec.mjs';
  * @param {string} [contentRepo] 内容库根；缺省走发现链约定路径
  * @returns {object} { [harnessId]: path }（文件缺失/损坏返回 {}，永不抛）
  */
-function readDeclaredPaths(contentRepo, optsEnv = process.env) {
+export function readDeclaredPaths(contentRepo, optsEnv = process.env) {
   try {
     const repo = contentRepo
       || (optsEnv.RELIC_CONTENT_REPO)

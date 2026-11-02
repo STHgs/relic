@@ -19,6 +19,8 @@ import { ensureHabitsStore } from '../src/core/habits.mjs';
 import { upgradeSteps } from '../src/core/upgrade-core.mjs';
 import { createScheduler } from '../src/core/scheduler.mjs';
 import { platformPaths } from '../src/core/paths.mjs';
+import { collectPlatformStatus, summarizeDeployReport } from '../src/core/platform-status.mjs';
+import { pipeline } from '../src/index.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
@@ -416,9 +418,74 @@ const server = createServer(async (req, res) => {
       } catch (e) {
         schedulerDetail = { backend: 'unknown', installed: false, enabled: false, running: null, detail: e.message };
       }
-      json(res, 200, { deployed, lastSync, contentOverview, scheduler, schedulerDetail });
+      // 平台治理状态：区分 已治理 / 已检测未治理 / 未检测 / 内容过期（自愈入口的依据）
+      let platformStatus = { platforms: [], ungoverned: [], stale: [], declaredMissing: [], governedCount: 0 };
+      try {
+        // 过期判定用本次渲染产物对比（dry-run 不写盘）；内容不可读则跳过过期判定
+        let renderMap = null;
+        try {
+          const dry = await pipeline({ policiesPath: join(DEFAULT_CONTENT, 'policies.yaml'), home: HOME, dryRun: true, runtimeRoot: DEFAULT_CONTENT });
+          if (dry.ok) renderMap = dry.fileMaps;
+        } catch { /* 未部署/内容损坏：仅做存在性判定 */ }
+        platformStatus = collectPlatformStatus({
+          home: HOME,
+          contentRepo: DEFAULT_CONTENT,
+          renderMap,
+        });
+      } catch (e) {
+        platformStatus.error = e.message;
+      }
+      json(res, 200, { deployed, lastSync, contentOverview, scheduler, schedulerDetail, ...platformStatus });
     } catch (e) {
       json(res, 500, { error: e.message });
+    }
+    return;
+  }
+
+  // ── POST /api/redeploy（SSE：只重放部署，不动身份/内容库/调度器） ──
+  if (url === '/api/redeploy' && req.method === 'POST') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    });
+    const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+    try {
+      if (!isDeployed()) {
+        send({ type: 'error', message: '未检测到已部署的身份内容库，请先完成安装向导' });
+        res.end();
+        return;
+      }
+      send({ type: 'step', message: '读取内容库并渲染治理文本...' });
+      const result = await pipeline({ policiesPath: join(DEFAULT_CONTENT, 'policies.yaml'), home: HOME, runtimeRoot: DEFAULT_CONTENT });
+      const summary = summarizeDeployReport(result);
+      if (!result.ok) {
+        send({ type: 'error', message: summary.errors.join('; ') || `部署失败（stage: ${result.stage}）` });
+        res.end();
+        return;
+      }
+      send({ type: 'done', report: summary });
+    } catch (e) {
+      send({ type: 'error', message: e.message });
+    }
+    res.end();
+    return;
+  }
+
+  // ── POST /api/scheduler（启用/停用宿主定时同步） ──
+  if (url === '/api/scheduler' && req.method === 'POST') {
+    const body = await parseBody(req);
+    const action = body.action;
+    if (action !== 'enable' && action !== 'disable') {
+      json(res, 400, { ok: false, reason: 'action 必须是 enable 或 disable' });
+      return;
+    }
+    try {
+      const sched = createScheduler({ repo: REPO, home: HOME });
+      const r = action === 'enable' ? sched.enable() : sched.disable();
+      json(res, 200, { ok: r.ok, action, result: r, status: sched.status() });
+    } catch (e) {
+      json(res, 500, { ok: false, reason: e.message });
     }
     return;
   }

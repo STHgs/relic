@@ -36,6 +36,7 @@
     "init-sync": "node scripts/init-sync.mjs",
     "install-schedule": "node scripts/install-schedule.mjs",
     "schedule": "node scripts/schedule.mjs",
+    "status": "node scripts/status.mjs",
     "bootstrap": "node scripts/bootstrap.mjs",
     "upgrade": "node scripts/upgrade.mjs",
     "cleanup-backups": "node scripts/cleanup-backups.mjs",
