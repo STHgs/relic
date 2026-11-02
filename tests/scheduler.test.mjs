@@ -224,4 +224,26 @@ describe('S5: schtasks', () => {
     const vbs = readFileSync(join(home, 'AppData', 'Local', 'relic', 'sync-silent.vbs'), 'utf8');
     assert.ok(vbs.includes('__REPO__') === false, 'vbs 的 __REPO__ 占位符必须被替换');
   });
+
+  it('启用态 /Query XML 省略 <Enabled> → 必须判为已启用（回归：启用成功却报失败）', () => {
+    const repo = tmp('winrepo-omit');
+    const home = tmp('winhome-omit');
+    mkdirSync(join(repo, 'scripts'), { recursive: true });
+    writeFileSync(join(repo, 'scripts', 'sync-silent.vbs'), 'REPO = "__REPO__"\n');
+    // 实测 Windows 任务计划程序：启用态导出 XML 不含 <Enabled>，禁用态才写 false
+    const xml = `<Task><Settings><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+      <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries></Settings></Task>`;
+    const calls = [];
+    const runFn = (cmd, args) => {
+      calls.push([cmd, ...args].join(' '));
+      return { ok: true, stdout: cmd === 'schtasks' ? xml : '', stderr: '' };
+    };
+    const s = createScheduler({ platform: 'win32', home, repo, runFn });
+
+    assert.equal(s.status().enabled, true, '缺省 <Enabled> 按任务计划程序默认值 true');
+    assert.equal(s.enable().ok, true, 'enable() 不得因缺省标签报失败');
+    const before = calls.length;
+    assert.equal(s.install().ok, true);
+    assert.ok(!calls.slice(before).some(c => c.includes('/ENABLE')), '已启用任务不应反复 /ENABLE');
+  });
 });

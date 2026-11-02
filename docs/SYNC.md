@@ -86,7 +86,7 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && 
 | systemd | `systemctl --user show` 的 UnitFileState / ActiveState | `disable --now` |
 | cron（回退） | crontab 中带 `# relic-sync` 标记的行（兼容旧版无标记行） | 删除该行 |
 | launchd | plist 存在 + `launchctl print` + `print-disabled` 标记 | `bootout` + 持久 `disable` 标记 |
-| schtasks | `schtasks /Query /XML` 的 `<Enabled>` | `/Change /DISABLE` |
+| schtasks | `schtasks /Query /XML`：启用态省略 `<Enabled>`（缺省即启用），仅显式 `false` 判为禁用 | `/Change /DISABLE` |
 
 `running` 为 `null` 表示该后端无法廉价判定运行态（cron/launchd/schtasks），不要当成 false。
 

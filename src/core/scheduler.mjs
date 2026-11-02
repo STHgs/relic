@@ -46,6 +46,8 @@ export function parseSystemctlShow(text) {
 
 /**
  * 解析 schtasks /Query /XML 的关键字段（只取 <Settings> 段内的 Enabled 与电池项）。
+ * 注意：/Query /XML 会省略 schema 默认值——**启用态没有 <Enabled>**，只有禁用态才出现
+ * `<Enabled>false</Enabled>`。故 enabled:null 表示"未显式给出"，调用方按默认 true 处理。
  * @param {string} xml
  * @returns {{enabled: boolean|null, disallowStartIfOnBatteries: boolean|null, stopIfGoingOnBatteries: boolean|null}}
  */
@@ -344,12 +346,14 @@ function schtasksBackend({ home, repo, runFn, fsx }) {
       return { backend: 'schtasks', installed: false, enabled: false, running: null, detail: 'schtasks 任务不存在' };
     }
     const parsed = parseSchtasksXml(q.stdout);
+    // 缺省值语义：任务计划程序导出 XML 时省略默认值，启用态不写 <Enabled>。
+    // 判据 = 只有显式 false 才算禁用（回归：启用成功却报「已禁用 / 启用失败」）。
     return {
       backend: 'schtasks',
       installed: true,
-      enabled: parsed.enabled === true,
+      enabled: parsed.enabled !== false,
       running: null,
-      detail: `Enabled=${parsed.enabled} batteryStart=${parsed.disallowStartIfOnBatteries} batteryStop=${parsed.stopIfGoingOnBatteries}`,
+      detail: `Enabled=${parsed.enabled === null ? 'default(true)' : parsed.enabled} batteryStart=${parsed.disallowStartIfOnBatteries} batteryStop=${parsed.stopIfGoingOnBatteries}`,
     };
   };
 
@@ -371,8 +375,11 @@ function schtasksBackend({ home, repo, runFn, fsx }) {
   };
 
   const enable = () => {
-    runFn('schtasks', ['/Change', '/TN', SCHTASKS_TASK, '/ENABLE']);
-    return { ok: status().enabled, status: status(), notes: [] };
+    const q = runFn('schtasks', ['/Change', '/TN', SCHTASKS_TASK, '/ENABLE']);
+    const st = status();
+    const notes = [];
+    if (!q.ok) notes.push((((q.stderr || q.stdout) || '').trim() || 'schtasks /Change /ENABLE 失败'));
+    return { ok: st.enabled, status: st, notes };
   };
 
   return {
@@ -403,7 +410,10 @@ function schtasksBackend({ home, repo, runFn, fsx }) {
     enable,
     disable() {
       const q = runFn('schtasks', ['/Change', '/TN', SCHTASKS_TASK, '/DISABLE']);
-      return { ok: q.ok, status: status(), notes: [] };
+      const st = status();
+      const notes = [];
+      if (!q.ok) notes.push((((q.stderr || q.stdout) || '').trim() || 'schtasks /Change /DISABLE 失败'));
+      return { ok: st.enabled === false, status: st, notes };
     },
   };
 }
