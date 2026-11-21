@@ -31,7 +31,7 @@ relic 取自《赛博朋克 2077》里承载 Johnny Silverhand 人格印记（en
 
 ### Windows 一键部署（Release，推荐）
 
-1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前唯一 Release 是 **v0.0.1-beta 预发布**，暂无稳定版）；
+1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前为 **v0.0.3-beta 预发布**，暂无稳定版）；
 2. **解压前**右键 zip → 属性 → 勾选“解除锁定”（否则解压出的脚本会被 SmartScreen 拦）；
 3. 解压，双击 `relic-setup.cmd`；
 4. 脚本自动完成：检查 Node ≥ 20 与 Git（缺失则用 winget 安装）→ clone 引擎到
