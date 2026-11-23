@@ -102,7 +102,7 @@ cat ~/.config/relic-sync/engine.lock             # 引擎版本
 systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 ```
 
-新开 agent session，首行包含 `RELIC IS RUNNING @ MMDD-HHMMSS`（以加粗引用块呈现）即受治理。
+新开 agent session，首行包含 `RELIC IS RUNNING @ MMDD-HHMMSS`（单行表格呈现，全角括号包裹）即受治理。
 `MMDD-HHMMSS` 是实时时间戳——复读旧文本会露馅。
 
 ## 日常

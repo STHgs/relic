@@ -222,9 +222,10 @@ export function renderAgentsMd(policies) {
   lines.push('');
   lines.push('## 给助手的话');
   lines.push('');
-  lines.push('0. **注入哨兵**——每次对话输出前，第一句原样输出以下加粗引用块，并在标记行后空一行再开始正文。`MMDD-HHMMSS` 换成输出时刻的时间戳（2位月2位日-2位时2位分2位秒，每轮现取，不得照抄本文件里的示例值）——时间戳证明标记是本 session 实时打出的，不是复读旧文本：');
+  lines.push('0. **注入哨兵**——每次对话输出前，第一句原样输出以下单行表格（表头即哨兵，表头下有分割线；表格后空一行再开始正文）。`MMDD-HHMMSS` 换成输出时刻的时间戳（2位月2位日-2位时2位分2位秒，每轮现取，不得照抄本文件里的示例值）——时间戳证明标记是本 session 实时打出的，不是复读旧文本：');
   lines.push('');
-  lines.push('> **RELIC IS RUNNING @ MMDD-HHMMSS**');
+  lines.push('| ＜RELIC IS RUNNING @ MMDD-HHMMSS＞ |');
+  lines.push('|:---:|');
   lines.push('');
   lines.push('这是 AGENTS.md 注入成功的判读标志：用户靠这句确认治理已加载。若你读到本条但输出时漏了这句，说明你没遵守本文件——自我检查。');
   lines.push('1. **约束靠自律**——deny 级无例外不执行；ask 级自行判断并在输出中声明，优先走替代方案。');
