@@ -183,8 +183,8 @@ WantedBy=timers.target
   };
 }
 
-function cronBackend({ repo, runFn, logPath }) {
-  const line = `*/5 * * * * cd ${repo} && npm run sync >> ${logPath} 2>&1 ${CRON_MARKER}`;
+function cronBackend({ repo, runFn }) {
+  const line = `*/5 * * * * cd ${repo} && npm run sync >> ~/.relic-sync.log 2>&1 ${CRON_MARKER}`;
 
   const readCrontab = () => {
     const q = runFn('crontab', ['-l']);
@@ -242,7 +242,7 @@ function cronBackend({ repo, runFn, logPath }) {
   };
 }
 
-function launchdBackend({ home, repo, runFn, fsx, logPath }) {
+function launchdBackend({ home, repo, runFn, fsx }) {
   const dir = join(home, 'Library', 'LaunchAgents');
   const plistPath = join(dir, `${LAUNCHD_LABEL}.plist`);
   const uid = typeof process.getuid === 'function' ? process.getuid() : null;
@@ -262,8 +262,8 @@ function launchdBackend({ home, repo, runFn, fsx, logPath }) {
     <string>sync</string>
   </array>
   <key>StartInterval</key><integer>300</integer>
-  <key>StandardOutPath</key><string>${logPath}</string>
-  <key>StandardErrorPath</key><string>${logPath}</string>
+  <key>StandardOutPath</key><string>${home}/.relic-sync.log</string>
+  <key>StandardErrorPath</key><string>${home}/.relic-sync.log</string>
 </dict>
 </plist>
 `;
@@ -321,7 +321,7 @@ function launchdBackend({ home, repo, runFn, fsx, logPath }) {
 }
 
 function schtasksBackend({ home, repo, runFn, fsx }) {
-  const workDir = join(home, '.relic', 'state');
+  const workDir = join(home, 'AppData', 'Local', 'relic');
   const vbsDst = join(workDir, 'sync-silent.vbs');
   const vbsSrc = join(repo, 'scripts', 'sync-silent.vbs');
   const tr = `wscript.exe "${vbsDst}"`;
@@ -451,8 +451,7 @@ export function createScheduler(opts = {}) {
     existsSync, mkdirSync, writeFileSync, readFileSync,
     ...(opts.fsx ?? {}),
   };
-  const logPath = opts.logPath ?? join(home, '.relic', 'state', 'sync.log');
-  const ctx = { home, repo, runFn, fsx, logPath };
+  const ctx = { home, repo, runFn, fsx };
 
   if (platform === 'win32') return schtasksBackend(ctx);
   if (platform === 'darwin') return launchdBackend(ctx);

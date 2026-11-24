@@ -18,7 +18,6 @@ relic 把"一个身份"的规则、流程、人设编译成各 AI 平台都能�
 src/core/        loader · module-loader（profile 合并）· validator（ajv）· conflict（三层冲突）
                  inject（规则写入 CLI）· skeleton（骨架门禁逻辑）· sync-core · upgrade-core
                  habits（本机学习库）· paths（四层解析链）· exec（平台无关执行层）· provider（Gitee/GitHub）
-                 relic-root（根/布局解析）· migrate-layout（旧布局自动迁移与备份回滚）
 src/render/      agents-md.mjs —— 纯函数渲染器
 src/adapters/    opencode · omo · dsh · codex（route A：只产 AGENTS.md）
 src/orchestrator/generate.mjs —— 载入→校验→渲染→探测→安装 流水线
@@ -27,10 +26,6 @@ template/        新身份种子（manifest + 4 个通用模块 + 人设样板�
 tests/           node:test 单测与分层集成（Tier1–Tier4）
 docs/            SYNC.md（同步/调度器/升级边界）· ARCHITECTURE.md（本文件）
 ```
-
-部署布局（v1.0.0 硬切）：`~/.relic/{engine,sync,habits,state}` + 根级 `relic.config.json`；
-旧布局（`~/.config/relic*`、`~/.local/state/relic`）由 `ensureLayout()` 自动迁移，备份保留在
-`<root>/state/migrate-backup-*`，失败回滚。
 
 ## 流水线
 
@@ -104,7 +99,7 @@ preflight（工作树干净、身份可用、内容库在 main）
 
 ## 学习库（机器级记忆）
 
-- agent 在"因用户偏好调整了输出方式"的轮次写 `~/.relic/habits/learned.yaml`（不入 git）。
+- agent 在"因用户偏好调整了输出方式"的轮次写 `~/.config/relic-habits/learned.yaml`（不入 git）。
 - 重计算下放到 sync：衰减排序 `score = hits × 0.7^周数`，容量 30 条，头部 3 条常驻注入，`hits≥3 且前 2 且存活≥7 天` 生成固化申请。
 - 固化由用户确认后写入内容库 `personas.directives`，再删除对应 habit 条目。
 

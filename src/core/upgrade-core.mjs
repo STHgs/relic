@@ -2,12 +2,15 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve, join } from 'path';
 import { run as runExec, userHome } from './exec.mjs';
-import { contentRepoDefault } from './relic-root.mjs';
 
 export function discoverUpgradeContent({ repo, content, env = process.env, home = userHome() }) {
   if (content || env.RELIC_CONTENT_REPO) return resolve(content || env.RELIC_CONTENT_REPO);
-  // 根级 relic.config.json（v1.0.0 起）；home 注入保证测试/多用户隔离
-  return contentRepoDefault({ ...env, HOME: env.HOME ?? home });
+  const path = join(repo, 'relic.config.json');
+  if (existsSync(path)) {
+    const cfg = JSON.parse(readFileSync(path, 'utf8'));
+    if (cfg.contentRepo) return resolve(cfg.contentRepo);
+  }
+  return join(home, '.config', 'relic-sync');
 }
 
 /**

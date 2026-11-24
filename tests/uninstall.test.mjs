@@ -44,7 +44,6 @@ afterEach(() => {
   rmSync(pjoin(FAKE_HOME, '.dsh'), { recursive: true, force: true });
   rmSync(pjoin(FAKE_HOME, '.config'), { recursive: true, force: true });
   rmSync(pjoin(FAKE_HOME, '.local'), { recursive: true, force: true });
-  rmSync(pjoin(FAKE_HOME, '.relic'), { recursive: true, force: true });
 });
 
 describe('U1: listDeployed', () => {
@@ -72,7 +71,7 @@ describe('U2: uninject removes AGENTS.md + .bak, saves backup', () => {
   });
   it('saves backup copy', async () => {
     await uninject();
-    const backupDir = pjoin(FAKE_HOME, '.relic', 'state', 'uninject-backup');
+    const backupDir = pjoin(FAKE_HOME, '.local', 'state', 'relic', 'uninject-backup');
     assert.ok(existsSync(pjoin(backupDir, 'DSH-AGENTS.md')), 'DSH backup should exist');
     const content = readFileSync(pjoin(backupDir, 'DSH-AGENTS.md'), 'utf8');
     assert.match(content, /governance test/);

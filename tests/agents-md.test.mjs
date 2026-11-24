@@ -75,13 +75,9 @@ describe('R4: 注入哨兵（RELIC IS RUNNING）', () => {
   it('states the purpose: AGENTS.md injection verification', () => {
     assert.match(md, /AGENTS\.md 注入成功/);
   });
-  it('renders the sentinel as a single-row table with full-width brackets', () => {
-    assert.match(md, /^\| ＜RELIC IS RUNNING @ MMDD-HHMMSS＞ \|$/m);
-    assert.match(md, /^\|:---:\|$/m);
-    assert.doesNotMatch(md, /```diff/);
-  });
-  it('instructs a blank line after the marker table', () => {
-    assert.match(md, /表格后空一行/);
+  it('instructs red rendering via diff fenced block', () => {
+    assert.match(md, /```diff\n- RELIC IS RUNNING @ MMDD-HHMMSS\n```/);
+    assert.match(md, /渲染为红色/);
   });
   it('requires per-turn fresh timestamp, not a hardcoded one', () => {
     assert.match(md, /每轮现取/);

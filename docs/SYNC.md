@@ -35,7 +35,7 @@ Description=relic sync
 
 [Service]
 Type=oneshot
-WorkingDirectory=<engine 路径>
+WorkingDirectory=<clone 路径>
 ExecStart=/usr/bin/env npm run sync
 ```
 
@@ -57,13 +57,13 @@ WantedBy=timers.target
 ### Linux / WSL（cron，无 systemd 时）
 
 ```
-*/5 * * * * cd <engine 路径> && npm run sync >> ~/.relic/state/sync.log 2>&1
+*/5 * * * * cd <clone 路径> && npm run sync >> ~/.relic-sync.log 2>&1
 ```
 
 ### Windows（Task Scheduler）
 
 ```
-schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <engine 路径> && npm run sync"
+schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <clone> && npm run sync"
 ```
 
 - 命令执行：`src/core/exec.mjs` 数组化（win32 经 shell 解析 npm.cmd；POSIX 行为不变）
@@ -73,7 +73,7 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <engine 路
 ### macOS（launchd）
 
 `install-schedule.mjs` 在 darwin 下自动写并加载 `~/Library/LaunchAgents/dev.relic.sync.plist`
-（StartInterval=300，日志 `~/.relic/state/sync.log`）——无需手工。
+（StartInterval=300，日志 `~/.relic-sync.log`）——无需手工。
 
 ## 调度器状态与启停
 
@@ -107,7 +107,7 @@ schtasks /Create /TN "relic-sync" /SC MINUTE /MO 5 /TR "cmd /c cd /d <engine 路
 
 ## 学习库（habits）与沙箱
 
-习惯记忆不再由 agent 直接写 `~/.relic/habits/learned.yaml`——绝大多数 harness 的
+习惯记忆不再由 agent 直接写 `~/.config/relic-habits/learned.yaml`——绝大多数 harness 的
 沙箱默认禁止工作区外写入，直写会让"自动学习"在安全设置下静默失效。改为提案-合并：
 
 ```
@@ -121,7 +121,7 @@ agent（可能在沙箱内）          引擎（未沙箱，sync 每 5 分钟）
 - **提案格式**（JSONL，追加一行）：
   `{"event":"teach","type":"style|feedback|workflow|reference","observation":"…","evidence":"…"}`
   或 `{"event":"hit","target":"<条目文本片段>"}`。
-- **扫描根**：`~/.relic/habits/sources.json`（机器级，不入内容库）；缺省探测
+- **扫描根**：`~/.config/relic-habits/sources.json`（机器级，不入内容库）；缺省探测
   `~/AIworkspace`、`~/projects`、`~/code`、`~/dev`、`~/src`、`~/workspace` 中存在的目录。
   扫描深度 3、每轮 ≤50 文件、单文件 ≤1 MB。
 - **安全阀**：每轮 ≤5 条新增、≤20 条命中；`evidence` 必填；非法行记审计不阻塞；
@@ -141,29 +141,6 @@ agent（可能在沙箱内）          引擎（未沙箱，sync 每 5 分钟）
 
 - 生成产物不入库：每次 sync 在本地 generate，产物是派生物。
 - 验收以 `npm test` + Tier1/Tier2 + `sync.test` 为准；单个平台的运行时观察只作冒烟参考。
-
-## 目录布局（v1.0.0，硬切）
-
-```
-~/.relic/                      （Windows: %USERPROFILE%\.relic）
-├── engine/                    引擎 clone（部署位）
-├── sync/                      身份内容库（policies.yaml + modules/ + engine.lock）
-├── habits/                    学习库（learned.yaml / sources.json / ingest-state.json / audit.log）
-├── state/                     状态与日志（sync.log / sync-gate.log / 迁移备份）
-└── relic.config.json          机器登记（contentRepo / syncRemote）
-```
-
-- **解析优先级**：根 `RELIC_ROOT` > `~/.relic`；内容库 `--content` / `RELIC_CONTENT_REPO` >
-  根级 `relic.config.json.contentRepo` > `~/.relic/sync`；学习库 `RELIC_HABITS_DIR` > `~/.relic/habits`。
-- **硬切**：旧路径（`~/.config/relic`、`~/.config/relic-sync`、`~/.config/relic-habits`、
-  `~/.local/state/relic`）不再被解析链识别。
-- **自动迁移**：sync/status/bootstrap/upgrade/uninstall/wizard 入口先调用 `ensureLayout()`；
-  检测到旧布局即迁移（内容库脏则拒绝；失败回滚）。迁移保留备份到
-  `<root>/state/migrate-backup-<时间戳>/`，确认后 `npm run migrate -- --cleanup-backup` 清理。
-- **只迁部署引擎**：旧规范路径（或调度器指向）的引擎才搬入 `engine/`；开发 clone 原地不动。
-  当前进程正跑在旧引擎里时先复制、再在下次运行从新引擎清理旧目录（归档入备份）。
-- **手动工具**：`npm run migrate`（预览）/ `-- --apply` / `-- --status` / `-- --cleanup-backup` /
-  `-- --force`（内容库脏也迁移，不推荐）。
 
 ## 同步门控（无消费者则跳过）
 
@@ -228,9 +205,9 @@ permission patterns 属用户主权区，零审查。
 
 ## 引擎与内容
 
-- 引擎：`STHgs/relic`（静态权威源；本机 `~/.relic/engine`；升级 `npm run upgrade -- --tag <t>`）
-- 内容：`<your-id>/relic-sync`（每身份一个；本机 `~/.relic/sync`；改规则在此 commit+push）
-- 发现链：`--content` 参数 > `RELIC_CONTENT_REPO` env > 根级 `relic.config.json` > `~/.relic/sync`
+- 引擎：`STHgs/relic`（静态权威源；本机 `~/.config/relic`；升级 `npm run upgrade -- --tag <t>`）
+- 内容：`<your-id>/relic-sync`（每身份一个；本机 `~/.config/relic-sync`；改规则在此 commit+push）
+- 发现链：`--content` 参数 > `RELIC_CONTENT_REPO` env > 引擎 `relic.config.json` > `~/.config/relic-sync`
 - 新机器接入：`git clone <引擎> → npm run bootstrap`（自动 init-sync 或 clone 已有身份库）
 
 ## 受控升级与失败恢复

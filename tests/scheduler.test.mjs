@@ -221,7 +221,7 @@ describe('S5: schtasks', () => {
     assert.equal(r.ok, true);
     assert.ok(calls.some(c => c.includes('/Create')));
     assert.ok(calls.some(c => c.startsWith('powershell')), '电池项 true 时必须尝试修正');
-    const vbs = readFileSync(join(home, '.relic', 'state', 'sync-silent.vbs'), 'utf8');
+    const vbs = readFileSync(join(home, 'AppData', 'Local', 'relic', 'sync-silent.vbs'), 'utf8');
     assert.ok(vbs.includes('__REPO__') === false, 'vbs 的 __REPO__ 占位符必须被替换');
   });
 

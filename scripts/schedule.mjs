@@ -11,25 +11,14 @@
 // =============================================================================
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
 import { userHome } from '../src/core/exec.mjs';
 import { createScheduler } from '../src/core/scheduler.mjs';
-import { relicLayout, relicRoot } from '../src/core/relic-root.mjs';
-import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
 const arg = process.argv[2] ?? '--status';
 
-const mig = ensureLayout();
-if (!mig.ok) {
-  console.error('[schedule] 目录迁移失败：' + (mig.reason || '未知错误'));
-  process.exit(1);
-}
-const L = relicLayout(relicRoot());
-const DEPLOY_REPO = existsSync(resolve(L.engine, 'package.json')) ? L.engine : REPO;
-
-const scheduler = createScheduler({ repo: DEPLOY_REPO, home: HOME, logPath: L.syncLog });
+const scheduler = createScheduler({ repo: REPO, home: HOME });
 
 const fmt = (st) =>
   `${st.backend}: installed=${st.installed} enabled=${st.enabled} running=${st.running === null ? 'unknown' : st.running}`;

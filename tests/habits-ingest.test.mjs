@@ -31,8 +31,7 @@ after(() => {
   rmSync(home, { recursive: true, force: true });
 });
 beforeEach(() => {
-  // 每例重置库与状态（v1.0.0：库在 <home>/.relic/habits）
-  rmSync(join(home, '.relic'), { recursive: true, force: true });
+  // 每例重置库与状态
   rmSync(join(home, '.config'), { recursive: true, force: true });
 });
 

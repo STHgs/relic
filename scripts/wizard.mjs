@@ -24,20 +24,10 @@ import { createScheduler } from '../src/core/scheduler.mjs';
 import { platformPaths } from '../src/core/paths.mjs';
 import { collectPlatformStatus, summarizeDeployReport } from '../src/core/platform-status.mjs';
 import { pipeline } from '../src/index.mjs';
-import { contentRepoDefault, stateDir } from '../src/core/relic-root.mjs';
-import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
-
-// 布局迁移（硬切 v1.0.0）：旧布局 → ~/.relic（新布局下为 no-op）
-const mig = ensureLayout();
-if (!mig.ok) {
-  console.error('[wizard] 目录迁移失败：' + (mig.reason || '未知错误'));
-  process.exit(1);
-}
-
-const DEFAULT_CONTENT = contentRepoDefault();
+const DEFAULT_CONTENT = join(HOME, '.config', 'relic-sync');
 const PORT_START = 17777;
 const PORT_RETRIES = 3;
 
@@ -596,7 +586,7 @@ const server = createServer(async (req, res) => {
   // ── GET /api/reinject/status（恢复画面显示备份状态） ──
   if (url === '/api/reinject/status' && req.method === 'GET') {
     const { readdirSync: rd } = await import('fs');
-    const backupDir = join(stateDir(), 'uninject-backup');
+    const backupDir = join(HOME, '.local', 'state', 'relic', 'uninject-backup');
     const hasBackup = existsSync(backupDir);
     const backups = hasBackup
       ? rd(backupDir).filter((f) => f.endsWith('-AGENTS.md'))

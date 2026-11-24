@@ -11,10 +11,9 @@
 '   consumer probe + isTTY manual override). This wrapper now does ONE thing:
 '   silent execution. npm run sync itself decides run-or-skip.
 ' DEPLOYMENT: install-schedule.mjs copies this file to
-'   <relic root>/state/sync-silent.vbs (default %USERPROFILE%\.relic\state),
-'   replacing __REPO__ with the local engine clone path. The task /TR points
-'   at THAT copy, never at the repo, so git pull never clobbers the live
-'   wrapper (repo copy stays portable).
+'   %LOCALAPPDATA%\relic\sync-silent.vbs, replacing __REPO__ with the local
+'   engine clone path. The task /TR points at THAT copy, never at the repo,
+'   so git pull never clobbers the live wrapper (repo copy stays portable).
 ' CONSTRAINT: keep this file PURE ASCII. wscript on CJK Windows may read a
 '   UTF-8-without-BOM file as GBK and shift string boundaries -> parse chaos.
 ' NOTE: REPO below ("__REPO__") is replaced by install-schedule.mjs at install time.

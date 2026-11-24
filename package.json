@@ -1,6 +1,6 @@
 {
   "name": "relic",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Portable personal agent-configuration system (rules/workflows/persona).",
@@ -41,7 +41,6 @@
     "upgrade": "node scripts/upgrade.mjs",
     "cleanup-backups": "node scripts/cleanup-backups.mjs",
     "wizard": "node scripts/wizard.mjs",
-    "migrate": "node scripts/migrate.mjs",
     "console": "node scripts/console.mjs",
     "console:shortcut": "node scripts/console-shortcut.mjs",
     "uninstall": "node scripts/uninstall.mjs",

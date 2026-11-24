@@ -159,7 +159,7 @@ export function renderAgentsMd(policies) {
   lines.push('1. **收尾二值自省**（每轮，无工具调用）：问自己"本轮我是否因用户偏好调整了输出方式"。否 → 跳过全部记忆动作。');
   lines.push('2. **有感轮写入**（仅自省为"是"的轮次）：向**当前工作区**的 `.relic/habits-proposals.jsonl` 追加一行 JSON——`{"event":"teach","type":"style|feedback|workflow|reference","observation":"≤200字","evidence":"依据"}`。判据：对未来有用 且 ①助手人设未覆盖 ②环境推不出。不要写工作区外的文件（沙箱常态下会被拒绝）；合并由 relic sync 每 5 分钟完成。');
   lines.push('3. **顺手 hits 更新**：本轮实际运用了头部某条偏好 → 追加 `{"event":"hit","target":"<该条文本片段>"}`（同一提案文件，同样只写工作区）。');
-  lines.push('4. **全库按需检索**：会话中涉及记忆主题时可 Read `~/.relic/habits/learned.yaml`（只读；若被沙箱拒绝，报告用户执行 `npm run sandbox-access -- --apply`）。');
+  lines.push('4. **全库按需检索**：会话中涉及记忆主题时可 Read `~/.config/relic-habits/learned.yaml`（只读；若被沙箱拒绝，报告用户执行 `npm run sandbox-access -- --apply`）。');
   lines.push('5. **固化照指令执行**：若下方出现「固化申请指令」——按其点名条目向用户申请（一句话确认），确认后写入同步库 personas.directives 并 commit+push，同时删除 habit 库对应条目。');
   lines.push('6. 优先级：助手人设（声明层）> 本 session 新学习 > 历史学习条目。');
   lines.push('');
@@ -222,11 +222,12 @@ export function renderAgentsMd(policies) {
   lines.push('');
   lines.push('## 给助手的话');
   lines.push('');
-  lines.push('0. **注入哨兵**——每次对话输出前，第一句原样输出以下单行表格（表头即哨兵，表头下有分割线；表格后空一行再开始正文）。`MMDD-HHMMSS` 换成输出时刻的时间戳（2位月2位日-2位时2位分2位秒，每轮现取，不得照抄本文件里的示例值）——时间戳证明标记是本 session 实时打出的，不是复读旧文本：');
-  lines.push('');
-  lines.push('| ＜RELIC IS RUNNING @ MMDD-HHMMSS＞ |');
-  lines.push('|:---:|');
-  lines.push('');
+  lines.push('0. **注入哨兵**——每次对话输出前，第一句原样输出以下红色标记（diff 代码块的删除行在 UI 中渲染为红色）。`MMDD-HHMMSS` 换成输出时刻的时间戳（2位月2位日-2位时2位分2位秒，每轮现取，不得照抄本文件里的示例值）——时间戳证明标记是本 session 实时打出的，不是复读旧文本：');
+  lines.push('````');
+  lines.push('```diff');
+  lines.push('- RELIC IS RUNNING @ MMDD-HHMMSS');
+  lines.push('```');
+  lines.push('````');
   lines.push('这是 AGENTS.md 注入成功的判读标志：用户靠这句确认治理已加载。若你读到本条但输出时漏了这句，说明你没遵守本文件——自我检查。');
   lines.push('1. **约束靠自律**——deny 级无例外不执行；ask 级自行判断并在输出中声明，优先走替代方案。');
   lines.push('2. **中风险操作不用回避**——直接发起（webfetch、工作区外路径等），但在输出中显式标注风险与理由。');

@@ -28,7 +28,7 @@ const policies = lp.policies;
 function fakeHome(withStore) {
   const home = mkdtempSync(join(tmpdir(), 'relic-purity-'));
   if (withStore) {
-    const dir = join(home, '.relic', 'habits');
+    const dir = join(home, '.config', 'relic-habits');
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'learned.yaml'),
       'entries:\n  - type: style\n    observation: 极大影响的偏好甲\n    evidence: e\n    recorded: 2026-01-01\n    hits: 9\n    lastHit: 2026-10-01\n');

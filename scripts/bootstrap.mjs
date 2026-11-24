@@ -11,19 +11,8 @@ import { existsSync, readFileSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
-import { contentRepoDefault } from '../src/core/relic-root.mjs';
-import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-
-// 0. 布局迁移（硬切 v1.0.0）：旧布局 → ~/.relic
-const mig = ensureLayout();
-if (!mig.ok) {
-  console.error('[bootstrap] 目录迁移失败：' + (mig.reason || '未知错误'));
-  process.exit(1);
-}
-if (mig.migrated) console.log(`[bootstrap] 目录已迁移到 ~/.relic（备份：${mig.backup || '—'}）`);
-
 const run = (cmd, args, opts = {}) => {
   // win32 经 exec.mjs（shell 解析 npm.cmd）；POSIX 行为不变；stdio inherit 透传交互
   const r = runExec(cmd, args, { encoding: 'utf8', ...(opts.inherit ? { stdio: 'inherit' } : {}), ...opts });
@@ -51,8 +40,11 @@ if (need.length > 0) { console.error('[bootstrap] 缺少前置：\n  ' + need.jo
 log('环境自检通过（node/git/gh）');
 
 // 2. 内容库判定
-const defaultContent = contentRepoDefault();
-const contentReady = existsSync(join(defaultContent, 'policies.yaml'));
+const cfgPath = join(REPO, 'relic.config.json');
+const defaultContent = join(process.env.HOME, '.config', 'relic-sync');
+const contentReady = existsSync(cfgPath)
+  ? existsSync(join(JSON.parse(readFileSync(cfgPath, 'utf8')).contentRepo, 'policies.yaml'))
+  : existsSync(join(defaultContent, 'policies.yaml'));
 
 if (!contentReady) {
   const mode = await ask('未发现身份内容库。1=新建身份（Gitee 私有库，令牌粘贴一次） 2=接入已有同步库（填 URL） [1] ');

@@ -4,7 +4,7 @@
 // 用法：
 //   npm run init-sync [-- --name <repo>] [--path <本地路径>] [--import <源目录>] [--provider gitee|github]
 //   --name     同步库名，默认 relic-sync（在认证账号下创建私有库）
-//   --path     本地工作副本路径，默认 ~/.relic/sync
+//   --path     本地工作副本路径，默认 ~/.config/relic-sync
 //   --import   从既有目录导入 policies.yaml + modules/（迁移身份用）；
 //              缺省则从引擎 template/ 种子（新身份）
 //   --provider 托管平台：gitee（默认，大陆可达性优先）/ github（gh CLI 设备码）
@@ -19,16 +19,8 @@ import { resolve, dirname, join, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
 import { getProvider, tokenGuidance, giteeCreateRepo, giteeWhoami, giteeRepoExists } from '../src/core/provider.mjs';
-import { userHome } from '../src/core/exec.mjs';
-import { contentRepoDefault, readRelicConfig, writeRelicConfig, relicRoot } from '../src/core/relic-root.mjs';
-import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const HOME = userHome();
-
-// 布局迁移（硬切 v1.0.0）：先迁移旧布局，再决定新内容库默认位置
-const mig = ensureLayout();
-if (!mig.ok) { console.error('[init-sync] 目录迁移失败：' + (mig.reason || '未知错误')); process.exit(1); }
 const run = (file, args, opts = {}) => {
   const r = spawnSync(file, args, { encoding: 'utf8', env: { ...process.env, GIT_ASKPASS: '', GIT_TERMINAL_PROMPT: '0' }, ...opts });
   return { ok: r.status === 0, out: (r.stdout || '') + (r.stderr || '') };
@@ -44,7 +36,7 @@ const argOf = (flag, dflt) => {
 const NAME = argOf('--name', 'relic-sync');
 const PROVIDER_ID = argOf('--provider', 'gitee');  // 2026-09-29：默认 gitee（大陆可达性），github 可选
 const provider = getProvider(PROVIDER_ID);
-const PATH_ = resolve(argOf('--path', contentRepoDefault()));
+const PATH_ = resolve(argOf('--path', join(process.env.HOME, '.config', 'relic-sync')));
 const IMPORT = argOf('--import', null);
 
 const die = (msg) => { console.error('[init-sync] ' + msg); process.exit(1); };
@@ -144,15 +136,22 @@ if (provider.id === 'github') {
   if (!gitAt(['push', '-u', 'origin', 'main'], PATH_).ok) die('push 到 Gitee 失败（令牌已存 credential store，可重跑）');
 }
 
-// ---- 7. 身份登记（根级 relic.config.json，v1.0.0）----
-const cfg = { ...readRelicConfig(relicRoot()) };
+// ---- 7. 身份登记（引擎侧 relic.config.json，gitignored）----
+const cfgPath = join(REPO, 'relic.config.json');
+let cfg = {};
+if (existsSync(cfgPath)) { try { cfg = JSON.parse(readFileSync(cfgPath, 'utf8')); } catch { cfg = {}; } }
 cfg.contentRepo = PATH_;
 cfg.syncRemote = provider.id === 'github'
   ? provider.repoUrl(gh(['api', 'user', '-q', '.login']).out.trim(), NAME)
   : provider.repoUrl(giteeUser, NAME);
-writeRelicConfig(cfg, relicRoot());
-const root = relicRoot();
-if (!existsSync(root)) mkdirSync(root, { recursive: true });
+writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+
+// gitignore 登记（幂等）
+const engineGi = join(REPO, '.gitignore');
+const giText = existsSync(engineGi) ? readFileSync(engineGi, 'utf8') : '';
+if (!giText.includes('relic.config.json')) {
+  writeFileSync(engineGi, giText + '\n# Per-machine identity registration (engine side)\nrelic.config.json\n');
+}
 
 console.log(`[init-sync] ✅ 同步库已创建并推送：${cfg.syncRemote}`);
 console.log(`[init-sync] 本地工作副本：${PATH_}`);
@@ -160,4 +159,4 @@ console.log(`[init-sync] 引擎版本锁定：${engineTag} @ ${engineCommit.slic
 console.log('[init-sync] 下一步：');
 console.log(`  1) 首次部署：cd ${REPO} && npm run sync`);
 console.log(`  2) 修改规则：编辑 ${PATH_}/modules/<id>/module.yaml 后 commit+push`);
-console.log(`  3) 新平台接入：git clone ${cfg.syncRemote} ~/.relic/sync 后同 1`);
+console.log(`  3) 新平台接入：git clone ${cfg.syncRemote} ~/.config/relic-sync 后同 1`);

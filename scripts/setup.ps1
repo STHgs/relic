@@ -84,9 +84,7 @@ Write-Host "  [2/4] Git OK ($gitVersion)" -ForegroundColor Green
 
 # ---- 3/4 下载引擎 ----
 Write-Host '  [3/4] Downloading relic...'
-$root = Join-Path $env:USERPROFILE '.relic'
-$dest = Join-Path $root 'engine'
-if (-not (Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+$dest = Join-Path $env:USERPROFILE 'relic'
 if (Test-Path (Join-Path $dest 'package.json')) {
     Write-Host '  [3/4] 已存在，跳过下载' -ForegroundColor Green
 } else {
@@ -97,14 +95,6 @@ if (Test-Path (Join-Path $dest 'package.json')) {
     }
 }
 Write-Host '  [3/4] relic ready' -ForegroundColor Green
-
-# ---- 3.5/4 旧布局自动迁移（~/.config/relic-sync 等 → ~/.relic；旧引擎归档）----
-Write-Host '  [3.5/4] Migrating legacy layout...'
-& node (Join-Path $dest 'scripts\migrate.mjs') --apply
-if ($LASTEXITCODE -ne 0) {
-    Write-Host '  [ERROR] 目录迁移失败（备份保留在 %USERPROFILE%\.relic\state）。' -ForegroundColor Red
-    Exit-WithPause 1
-}
 
 # ---- 4/4 依赖 + 向导 ----
 Write-Host ''

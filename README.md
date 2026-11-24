@@ -31,11 +31,11 @@ relic 取自《赛博朋克 2077》里承载 Johnny Silverhand 人格印记（en
 
 ### Windows 一键部署（Release，推荐）
 
-1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前稳定版 **v1.0.0**）；
+1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前为 **v0.0.3-beta 预发布**，暂无稳定版）；
 2. **解压前**右键 zip → 属性 → 勾选“解除锁定”（否则解压出的脚本会被 SmartScreen 拦）；
 3. 解压，双击 `relic-setup.cmd`；
 4. 脚本自动完成：检查 Node ≥ 20 与 Git（缺失则用 winget 安装）→ clone 引擎到
-   `%USERPROFILE%\.relic\engine` → `npm install` → 启动浏览器向导。任一步失败，窗口会停住显示原因，
+   `%USERPROFILE%\relic` → `npm install` → 启动浏览器向导。任一步失败，窗口会停住显示原因，
    不会闪退。
 
 向导结束后部署即完成；以后从开始菜单「relic 控制台」启动控制台（按需启动，关窗口即停，
@@ -44,20 +44,16 @@ relic 取自《赛博朋克 2077》里承载 Johnny Silverhand 人格印记（en
 ### 手动部署（Linux / WSL / macOS，或已有 Node 的 Windows）
 
 ```bash
-git clone https://github.com/STHgs/relic.git ~/.relic/engine
-cd ~/.relic/engine
+git clone https://github.com/STHgs/relic.git
+cd relic
 ./install.sh          # Linux / WSL / macOS：装依赖 + 打开浏览器向导
 ```
 
 ```powershell
 # Windows（PowerShell）
-git clone https://github.com/STHgs/relic.git "$env:USERPROFILE\.relic\engine"
-cd "$env:USERPROFILE\.relic\engine"; npm install; npm run wizard
+git clone https://github.com/STHgs/relic.git
+cd "$env:USERPROFILE\relic"; npm install; npm run wizard
 ```
-
-> 已用旧布局（`~/.config/relic`、`~/.config/relic-sync`、`~/.config/relic-habits`）的用户：新版本首次运行
-> sync/status/bootstrap/upgrade 会自动迁移到 `~/.relic/`（备份保留在 `~/.relic/state/migrate-backup-*`，
-> 确认无误后 `npm run migrate -- --cleanup-backup` 清理）。
 
 向导完成：环境检查 → 选身份（新建 / 接入已有）→ 粘贴 Gitee 令牌（新建时需要，勾选 projects）
 → 部署 → 注册调度器。
@@ -80,7 +76,6 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 | 立即合并本机学习提案 | `npm run habits:merge`；`--pending` 看各工作区待合并行数，`--add-root <路径>` 注册扫描根，`--dry-run` 预览 |
 | Windows 沙箱只读授权（Codex） | `npm run sandbox-access`（探测）；`-- --apply` 授权，`-- --revoke` 打印撤销命令 |
 | 升级引擎 | `npm run upgrade -- --tag <tag>`（或 `--latest`） |
-| 目录迁移（旧布局 → `~/.relic`） | `npm run migrate`（预览）；`-- --apply` 执行；`-- --cleanup-backup` 清理迁移备份 |
 | 去治理（保留一切，可恢复） | `npm run uninstall -- --level uninject` |
 | 恢复治理 | `npm run uninstall -- --reinject` |
 | 查看/启停定时同步 | `npm run schedule -- --status` / `--enable` / `--disable`（三平台一致：systemd/cron/launchd/schtasks 四后端） |
@@ -93,29 +88,26 @@ npm run bootstrap     # 同一条链路，纯命令行，适合脚本/CI
 
 | 内容 | 路径 |
 |---|---|
-| 根目录 | `~/.relic`（Windows：`%USERPROFILE%\.relic`） |
-| 引擎 | `~/.relic/engine` |
-| 内容库 | `~/.relic/sync`（`policies.yaml` + `modules/`） |
-| 引擎版本锁 | `~/.relic/sync/engine.lock` |
-| 本机学习库 | `~/.relic/habits/learned.yaml`（不入 git） |
-| 状态/日志 | `~/.relic/state`（`sync.log`、`sync-gate.log`、迁移备份） |
-| 机器登记 | `~/.relic/relic.config.json`（`contentRepo` / `syncRemote`） |
+| 引擎 | `~/.config/relic` |
+| 内容库 | `~/.config/relic-sync`（`policies.yaml` + `modules/`） |
+| 引擎版本锁 | `~/.config/relic-sync/engine.lock` |
+| 本机学习库 | `~/.config/relic-habits/learned.yaml`（不入 git） |
 | 部署产物 | `~/.dsh/AGENTS.md`、`~/.config/opencode/AGENTS.md`、`~/.codex/AGENTS.md` 等 |
 
 ## 验证
 
 ```bash
 grep -c "RELIC IS RUNNING" ~/.dsh/AGENTS.md      # ≥1 即注入成功
-cat ~/.relic/sync/engine.lock                     # 引擎版本
+cat ~/.config/relic-sync/engine.lock             # 引擎版本
 systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 ```
 
-新开 agent session，首行包含 `RELIC IS RUNNING @ MMDD-HHMMSS`（单行表格呈现，全角括号包裹）即受治理。
+新开 agent session，首行出现 `RELIC IS RUNNING @ MMDD-HHMMSS` 即受治理。
 `MMDD-HHMMSS` 是实时时间戳——复读旧文本会露馅。
 
 ## 日常
 
-- **改规则/人设**：编辑 `~/.relic/sync/` 下内容 → commit + push → 5 分钟全域生效。
+- **改规则/人设**：编辑 `~/.config/relic-sync/` 下内容 → commit + push → 5 分钟全域生效。
 - **急用**：在引擎 clone 跑 `npm run sync`。
 - **控制台**：`npm run console` 按需启动（已在运行则只开浏览器）；关窗口即停止，治理与定时同步照常。状态页可直接「重新部署治理」「启用定时同步」。
 - **加规则/流程**：直接说需求，触发 `add-permission` / `add-workflow` 对话流程。
@@ -125,7 +117,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 
 | 症状 | 处置 |
 |---|---|
-| `内容库不存在` | clone 内容库到 `~/.relic/sync`，或 `npm run init-sync` |
+| `内容库不存在` | clone 内容库到 `~/.config/relic-sync`，或 `npm run init-sync` |
 | 骨架门禁 FAIL A | 改过渲染器但没 bump golden：同提交跑 `npm run check:skeleton -- --bump-golden` |
 | sync 报 dirty / diverged | 先在内容库 commit/push；relic 绝不自动 stash 或强推 |
 | push 被拒 | `gh auth refresh -h github.com -s repo,workflow` |
@@ -134,7 +126,6 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 | 定时同步显示已禁用 / 不再自动部署 | `npm run schedule -- --status` 看后端与真实状态；`--enable` 收敛到启用（重新部署也会自动启用） |
 | 新装了 harness（如桌面版）但治理没跟上 | `npm run status` 确认「已检测未治理」；控制台状态页点「重新部署治理」，或 `npm run sync -- --no-gate` |
 | Windows 调度器注册失败 | 管理员 PowerShell：先 `schtasks /Delete /TN relic-sync /F`，再在引擎 clone 重跑 `npm run install-schedule` |
-| 升级后发现文件都在 `~/.relic` 下 | v1.0.0 自动迁移；确认正常后 `npm run migrate -- --cleanup-backup` 清理备份 |
 
 ## 开发
 

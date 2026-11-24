@@ -19,7 +19,7 @@ generated/
 .last-sync
 .relic-deploy
 
-# Machine registration (v0.0.4 lives at ~/.relic/relic.config.json; keep ignoring legacy in-clone copies)
+# Per-machine identity registration (engine side)
 relic.config.json
 
 # Private dev handoff / plans (archived outside this repo)

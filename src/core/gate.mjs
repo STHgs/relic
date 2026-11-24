@@ -10,10 +10,9 @@
 //   - 进程签名表：harness id → 命令行特征（正/反斜杠双写兼容 win 路径）。
 //     首版硬编码 + 结构留配置化接口（将来加 harness 进内容库配置）。
 // =============================================================================
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { appendFileSync, mkdirSync } from 'fs';
 import { run } from './exec.mjs';
-import { stateDir } from './relic-root.mjs';
 
 /**
  * harness 进程签名表（命令行特征，匹配大小写不敏感）。
@@ -73,11 +72,16 @@ export function gateCheck(opts = {}) {
 }
 
 /**
- * gate 日志路径（v1.0.0：<root>/state/sync-gate.log）。
+ * gate 日志路径（平台惯例状态目录）。
  * @returns {string}
  */
 export function gateLogPath() {
-  return join(stateDir(), 'sync-gate.log');
+  if (process.platform === 'win32') {
+    const local = process.env.LOCALAPPDATA || join(process.env.USERPROFILE || '', 'AppData', 'Local');
+    return join(local, 'relic', 'sync-gate.log');
+  }
+  const state = process.env.XDG_STATE_HOME || join(process.env.HOME || '', '.local', 'state');
+  return join(state, 'relic', 'sync-gate.log');
 }
 
 /**
@@ -87,7 +91,7 @@ export function gateLogPath() {
 export function appendGateLog(entry) {
   try {
     const p = gateLogPath();
-    mkdirSync(dirname(p), { recursive: true });
+    mkdirSync(join(p, '..'), { recursive: true });
     const ts = new Date().toISOString().replace('T', ' ').slice(0, 19);
     appendFileSync(p, `${ts} action=${entry.action} ${entry.reason}${entry.invokedBy ? ' by=' + entry.invokedBy : ''}\n`);
   } catch { /* 日志失败永不阻塞同步 */ }

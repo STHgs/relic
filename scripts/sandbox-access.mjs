@@ -15,23 +15,20 @@ import { join, resolve } from 'path';
 import { run, userHome } from '../src/core/exec.mjs';
 import { planSandboxAccess, applySandboxAccess } from '../src/core/sandbox-access.mjs';
 import { HABITS_DIR } from '../src/core/habits.mjs';
-import { contentRepoDefault } from '../src/core/relic-root.mjs';
-import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const HOME = userHome();
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(n);
 
-const mig = ensureLayout();
-if (!mig.ok) {
-  console.error('[relic] 目录迁移失败：' + (mig.reason || '未知错误'));
-  process.exit(1);
-}
-
 function contentRepo() {
   const i = argv.indexOf('--content');
   if (i >= 0) return resolve(argv[i + 1]);
-  return contentRepoDefault();
+  if (process.env.RELIC_CONTENT_REPO) return resolve(process.env.RELIC_CONTENT_REPO);
+  try {
+    const cfg = JSON.parse(readFileSync(join(process.cwd(), 'relic.config.json'), 'utf8'));
+    if (cfg.contentRepo) return resolve(cfg.contentRepo);
+  } catch { /* 走约定路径 */ }
+  return join(HOME, '.config', 'relic-sync');
 }
 
 const dirs = [contentRepo(), HABITS_DIR()];
