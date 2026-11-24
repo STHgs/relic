@@ -120,6 +120,20 @@ describe('M2: apply 迁移', () => {
     assert.equal(existsSync(marker), false);
   });
 
+  it('目标引擎已存在（引擎归档路径）时，旧配置 syncRemote 仍保留', () => {
+    mkdirSync(L.engine, { recursive: true });
+    writeFileSync(join(L.engine, 'package.json'), '{}\n');
+    const r = migrateLayout({
+      home, env: env(), platform: 'linux', engineRoot: L.engine,
+      apply: true, scheduler: false, shortcut: false,
+    });
+    assert.equal(r.ok, true, r.reason);
+    const cfg = JSON.parse(readFileSync(join(L.root, 'relic.config.json'), 'utf8'));
+    assert.equal(cfg.contentRepo, L.content);
+    assert.equal(cfg.syncRemote, 'https://example.invalid/relic-sync.git', 'engine-leftover 的旧配置不得丢失');
+    assert.ok(existsSync(join(r.backup, 'engine-leftover')), '旧引擎应归档为 engine-leftover');
+  });
+
   it('内容库脏 → 拒绝迁移且不写目标', () => {
     mkdirSync(join(legacy.content, '.git'), { recursive: true });
     const r = migrateLayout({

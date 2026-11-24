@@ -223,6 +223,7 @@ export function migrateLayout(opts = {}) {
     const cfgSources = [
       join(L.engine, 'relic.config.json'),
       join(backup, 'engine', 'relic.config.json'),
+      join(backup, 'engine-leftover', 'relic.config.json'),
     ];
     let cfg = {};
     for (const s of cfgSources) {
