@@ -28,7 +28,7 @@ tests/           node:test 单测与分层集成（Tier1–Tier4）
 docs/            SYNC.md（同步/调度器/升级边界）· ARCHITECTURE.md（本文件）
 ```
 
-部署布局（v0.0.4 硬切）：`~/.relic/{engine,sync,habits,state}` + 根级 `relic.config.json`；
+部署布局（v1.0.0 硬切）：`~/.relic/{engine,sync,habits,state}` + 根级 `relic.config.json`；
 旧布局（`~/.config/relic*`、`~/.local/state/relic`）由 `ensureLayout()` 自动迁移，备份保留在
 `<root>/state/migrate-backup-*`，失败回滚。
 

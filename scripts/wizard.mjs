@@ -30,7 +30,7 @@ import { ensureLayout } from '../src/core/migrate-layout.mjs';
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
 
-// 布局迁移（硬切 v0.0.4）：旧布局 → ~/.relic（新布局下为 no-op）
+// 布局迁移（硬切 v1.0.0）：旧布局 → ~/.relic（新布局下为 no-op）
 const mig = ensureLayout();
 if (!mig.ok) {
   console.error('[wizard] 目录迁移失败：' + (mig.reason || '未知错误'));

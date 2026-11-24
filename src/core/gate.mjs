@@ -73,7 +73,7 @@ export function gateCheck(opts = {}) {
 }
 
 /**
- * gate 日志路径（v0.0.4：<root>/state/sync-gate.log）。
+ * gate 日志路径（v1.0.0：<root>/state/sync-gate.log）。
  * @returns {string}
  */
 export function gateLogPath() {

@@ -11,7 +11,7 @@ relic 会改写各 harness 的全局 `AGENTS.md`、注册定时任务、并在�
 | 最新 [Release](https://github.com/STHgs/relic/releases) | ✅ 接收安全修复 |
 | 更早的 tag、分叉、个人修改版 | ❌ 不提供修复 |
 
-当前分发状态：最新 Release 为 **v0.0.3-beta（预发布）**；更早的 `v0.2.0` tag 没有对应的 Release 资产。
+当前分发状态：最新 Release 为 **v1.0.0（正式版）**；历史预发布 tag 与旧 `v0.2.0` tag 不提供 Release 资产。
 判断你实际运行的版本，用 `git -C ~/.relic/engine rev-parse --short HEAD` 或 `cat ~/.relic/sync/engine.lock`。
 
 ## 报告漏洞

@@ -142,7 +142,7 @@ agent（可能在沙箱内）          引擎（未沙箱，sync 每 5 分钟）
 - 生成产物不入库：每次 sync 在本地 generate，产物是派生物。
 - 验收以 `npm test` + Tier1/Tier2 + `sync.test` 为准；单个平台的运行时观察只作冒烟参考。
 
-## 目录布局（v0.0.4，硬切）
+## 目录布局（v1.0.0，硬切）
 
 ```
 ~/.relic/                      （Windows: %USERPROFILE%\.relic）

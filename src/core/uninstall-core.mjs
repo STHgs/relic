@@ -218,7 +218,7 @@ export async function fullUninstall(opts = {}) {
   }
 
   // 3. 删引擎目录（最后——因为当前脚本正在引擎里跑）
-  //    根级机器登记一并删除（v0.0.4：~/.relic/relic.config.json）
+  //    根级机器登记一并删除（v1.0.0：~/.relic/relic.config.json）
   const rootCfg = join(relicRoot(), 'relic.config.json');
   if (existsSync(rootCfg)) {
     try { rmSync(rootCfg, { force: true }); } catch (e) { errors.push(`删除机器登记失败: ${e.message}`); }

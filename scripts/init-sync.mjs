@@ -26,7 +26,7 @@ import { ensureLayout } from '../src/core/migrate-layout.mjs';
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
 
-// 布局迁移（硬切 v0.0.4）：先迁移旧布局，再决定新内容库默认位置
+// 布局迁移（硬切 v1.0.0）：先迁移旧布局，再决定新内容库默认位置
 const mig = ensureLayout();
 if (!mig.ok) { console.error('[init-sync] 目录迁移失败：' + (mig.reason || '未知错误')); process.exit(1); }
 const run = (file, args, opts = {}) => {
@@ -144,7 +144,7 @@ if (provider.id === 'github') {
   if (!gitAt(['push', '-u', 'origin', 'main'], PATH_).ok) die('push 到 Gitee 失败（令牌已存 credential store，可重跑）');
 }
 
-// ---- 7. 身份登记（根级 relic.config.json，v0.0.4）----
+// ---- 7. 身份登记（根级 relic.config.json，v1.0.0）----
 const cfg = { ...readRelicConfig(relicRoot()) };
 cfg.contentRepo = PATH_;
 cfg.syncRemote = provider.id === 'github'

@@ -6,7 +6,7 @@ import { contentRepoDefault } from './relic-root.mjs';
 
 export function discoverUpgradeContent({ repo, content, env = process.env, home = userHome() }) {
   if (content || env.RELIC_CONTENT_REPO) return resolve(content || env.RELIC_CONTENT_REPO);
-  // 根级 relic.config.json（v0.0.4 起）；home 注入保证测试/多用户隔离
+  // 根级 relic.config.json（v1.0.0 起）；home 注入保证测试/多用户隔离
   return contentRepoDefault({ ...env, HOME: env.HOME ?? home });
 }
 

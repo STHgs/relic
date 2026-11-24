@@ -17,7 +17,7 @@ import { ensureLayout } from '../src/core/migrate-layout.mjs';
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
 
-// 布局迁移（硬切 v0.0.4）：确保部署引擎已收敛到 ~/.relic/engine
+// 布局迁移（硬切 v1.0.0）：确保部署引擎已收敛到 ~/.relic/engine
 const mig = ensureLayout();
 if (!mig.ok) {
   console.error('[schedule] 目录迁移失败：' + (mig.reason || '未知错误'));

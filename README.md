@@ -31,7 +31,7 @@ relic 取自《赛博朋克 2077》里承载 Johnny Silverhand 人格印记（en
 
 ### Windows 一键部署（Release，推荐）
 
-1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前为 **v0.0.3-beta 预发布**，暂无稳定版）；
+1. 打开 [Releases](https://github.com/STHgs/relic/releases)，下载最新的 `relic-setup.zip`（当前稳定版 **v1.0.0**）；
 2. **解压前**右键 zip → 属性 → 勾选“解除锁定”（否则解压出的脚本会被 SmartScreen 拦）；
 3. 解压，双击 `relic-setup.cmd`；
 4. 脚本自动完成：检查 Node ≥ 20 与 Git（缺失则用 winget 安装）→ clone 引擎到
@@ -134,7 +134,7 @@ systemctl --user list-timers relic-sync.timer    # cron / schtasks 同理
 | 定时同步显示已禁用 / 不再自动部署 | `npm run schedule -- --status` 看后端与真实状态；`--enable` 收敛到启用（重新部署也会自动启用） |
 | 新装了 harness（如桌面版）但治理没跟上 | `npm run status` 确认「已检测未治理」；控制台状态页点「重新部署治理」，或 `npm run sync -- --no-gate` |
 | Windows 调度器注册失败 | 管理员 PowerShell：先 `schtasks /Delete /TN relic-sync /F`，再在引擎 clone 重跑 `npm run install-schedule` |
-| 升级后发现文件都在 `~/.relic` 下 | v0.0.4 自动迁移；确认正常后 `npm run migrate -- --cleanup-backup` 清理备份 |
+| 升级后发现文件都在 `~/.relic` 下 | v1.0.0 自动迁移；确认正常后 `npm run migrate -- --cleanup-backup` 清理备份 |
 
 ## 开发
 

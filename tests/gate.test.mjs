@@ -14,7 +14,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { gateCheck, probeSignature, gateLogPath, appendGateLog, HARNESS_SIGNATURES } from '../src/core/gate.mjs';
 
-// G4 hermetic（2026-11-24）：门控日志路径改为 <root>/state（v0.0.4），
+// G4 hermetic（2026-11-24）：门控日志路径改为 <root>/state（v1.0.0），
 // 用 RELIC_STATE_DIR 指到临时目录 → 测试不写用户真实状态目录。
 const GATE_STATE = mkdtempSync(join(tmpdir(), 'relic-gate-'));
 process.env.RELIC_STATE_DIR = GATE_STATE;

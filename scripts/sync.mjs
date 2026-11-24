@@ -22,7 +22,7 @@ import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-// ---- 布局迁移（硬切 v0.0.4）：旧 ~/.config/relic-* → ~/.relic/{engine,sync,habits,state} ----
+// ---- 布局迁移（硬切 v1.0.0）：旧 ~/.config/relic-* → ~/.relic/{engine,sync,habits,state} ----
 const mig = ensureLayout();
 if (!mig.ok) {
   console.error(`[relic] 目录迁移失败：${mig.reason || '未知错误'}`);
