@@ -5,10 +5,10 @@
 // 便于排查"新装了 harness 但治理没跟上"这类问题。
 //   npm run status          # 文本表
 //   npm run status -- --json # 机器可读（脚本/CI 用）
-// 只读：不写文件、不改调度器。
+// 只读探测；例外：首次运行会触发旧布局 → ~/.relic 的自动迁移（迁移本身会写盘）。
 // =============================================================================
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { userHome } from '../src/core/exec.mjs';
@@ -18,10 +18,19 @@ import { readHabits, HABITS_FILE } from '../src/core/habits.mjs';
 import { countPendingProposals } from '../src/core/habits-ingest.mjs';
 import { planSandboxAccess } from '../src/core/sandbox-access.mjs';
 import { run } from '../src/core/exec.mjs';
+import { contentRepoDefault, habitsDir, relicLayout, relicRoot } from '../src/core/relic-root.mjs';
+import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
-const CONTENT = process.env.RELIC_CONTENT_REPO || join(HOME, '.config', 'relic-sync');
+
+const mig = ensureLayout();
+if (!mig.ok) {
+  console.error(`[status] 目录迁移失败：${mig.reason || '未知错误'}`);
+  process.exit(1);
+}
+
+const CONTENT = contentRepoDefault();
 
 const LABELS = {
   governed: '已治理',
@@ -40,7 +49,9 @@ function readLastSync() {
 
 function schedulerStatus() {
   try {
-    return createScheduler({ repo: REPO, home: HOME }).status();
+    const L = relicLayout(relicRoot());
+    const deploy = existsSync(join(L.engine, 'package.json')) ? L.engine : REPO;
+    return createScheduler({ repo: deploy, home: HOME, logPath: L.syncLog }).status();
   } catch (e) {
     return { backend: 'unknown', installed: false, enabled: false, running: null, detail: e.message };
   }
@@ -74,7 +85,7 @@ try {
 let sandbox = { applicable: false, reason: '未探测' };
 try {
   sandbox = planSandboxAccess({
-    dirs: [CONTENT, join(HOME, '.config', 'relic-habits')],
+    dirs: [CONTENT, habitsDir()],
     exec: (cmd, args) => run(cmd, args),
   });
 } catch (e) {

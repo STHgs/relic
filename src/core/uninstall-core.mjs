@@ -18,11 +18,12 @@ import { run, userHome } from './exec.mjs';
 import { platformPaths } from './paths.mjs';
 import { shortcutFiles } from './console-service.mjs';
 import { createScheduler } from './scheduler.mjs';
+import { relicRoot, contentRepoDefault, habitsDir, stateDir } from './relic-root.mjs';
 
 const HOME = userHome();
-const STATE_DIR = join(HOME, '.local', 'state', 'relic');
+const STATE_DIR = stateDir();
 const UNINJECT_BACKUP_DIR = join(STATE_DIR, 'uninject-backup');
-const DEFAULT_CONTENT = join(HOME, '.config', 'relic-sync');
+const DEFAULT_CONTENT = contentRepoDefault();
 
 // ─── 工具 ─────────────────────────────────────────────────────────────
 
@@ -200,7 +201,7 @@ export async function fullUninstall(opts = {}) {
   // 2. 删除各目录
   const dirsToRemove = [
     { path: DEFAULT_CONTENT, label: '内容库（身份/规则/人设）' },
-    { path: join(HOME, '.config', 'relic-habits'), label: '学习习惯' },
+    { path: habitsDir(), label: '学习习惯' },
     { path: STATE_DIR, label: '状态/日志' },
   ];
 
@@ -217,6 +218,11 @@ export async function fullUninstall(opts = {}) {
   }
 
   // 3. 删引擎目录（最后——因为当前脚本正在引擎里跑）
+  //    根级机器登记一并删除（v0.0.4：~/.relic/relic.config.json）
+  const rootCfg = join(relicRoot(), 'relic.config.json');
+  if (existsSync(rootCfg)) {
+    try { rmSync(rootCfg, { force: true }); } catch (e) { errors.push(`删除机器登记失败: ${e.message}`); }
+  }
   if (existsSync(engineDir) && !opts.skipEngine) {
     try {
       // 写一个标记文件让外部 shell 完成删除（self-delete 不可靠）

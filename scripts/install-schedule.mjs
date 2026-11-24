@@ -6,15 +6,27 @@
 // 关键语义：install() 会把"存在但被禁用"的任务重新启用；退出码以
 // status.enabled 为准，绝不以"命令返回 0"冒充安装成功。
 // =============================================================================
-import { resolve, dirname } from 'path';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { userHome } from '../src/core/exec.mjs';
 import { createScheduler } from '../src/core/scheduler.mjs';
+import { relicLayout, relicRoot } from '../src/core/relic-root.mjs';
+import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = userHome();
 
-const scheduler = createScheduler({ repo: REPO, home: HOME });
+// 布局迁移（硬切 v0.0.4）：确保部署引擎已收敛到 ~/.relic/engine
+const mig = ensureLayout();
+if (!mig.ok) {
+  console.error('[schedule] 目录迁移失败：' + (mig.reason || '未知错误'));
+  process.exit(1);
+}
+const L = relicLayout(relicRoot());
+const DEPLOY_REPO = existsSync(join(L.engine, 'package.json')) ? L.engine : REPO;
+
+const scheduler = createScheduler({ repo: DEPLOY_REPO, home: HOME, logPath: L.syncLog });
 const result = scheduler.install();
 const st = result.status;
 

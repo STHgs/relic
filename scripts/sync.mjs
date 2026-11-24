@@ -17,25 +17,30 @@ import { loadProfile } from '../src/core/module-loader.mjs';
 import { buildProbePolicies, assertGolden, checkDeterminism } from '../src/core/skeleton.mjs';
 import { loadHabitsView } from '../src/core/habits.mjs';
 import { mergeHabitProposals } from '../src/core/habits-ingest.mjs';
+import { contentRepoDefault } from '../src/core/relic-root.mjs';
+import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-// ---- 内容库发现链：--content 参数 > RELIC_CONTENT_REPO env > relic.config.json > 约定路径 ----
+// ---- 布局迁移（硬切 v0.0.4）：旧 ~/.config/relic-* → ~/.relic/{engine,sync,habits,state} ----
+const mig = ensureLayout();
+if (!mig.ok) {
+  console.error(`[relic] 目录迁移失败：${mig.reason || '未知错误'}`);
+  process.exit(1);
+}
+if (mig.migrated) {
+  console.log(`[relic] 目录已迁移到 ~/.relic（备份：${mig.backup || '—'}）`);
+}
+
+// ---- 内容库发现链：--content 参数 > RELIC_CONTENT_REPO env > relic.config.json > ~/.relic/sync ----
 const argOf = (flag) => {
   const i = process.argv.indexOf(flag);
   return i >= 0 ? process.argv[i + 1] : null;
 };
 function discoverContentRepo() {
-  const explicit = argOf('--content') || process.env.RELIC_CONTENT_REPO;
+  const explicit = argOf('--content');
   if (explicit) return resolve(explicit);
-  const cfgPath = join(REPO_ROOT, 'relic.config.json');
-  if (existsSync(cfgPath)) {
-    try {
-      const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
-      if (cfg.contentRepo) return resolve(cfg.contentRepo);
-    } catch { /* 损坏配置走约定路径 */ }
-  }
-  return join(process.env.HOME, '.config', 'relic-sync');
+  return contentRepoDefault();
 }
 const CONTENT_REPO = discoverContentRepo();
 const CONTENT_POLICIES = join(CONTENT_REPO, 'policies.yaml');
@@ -108,7 +113,7 @@ if (args.includes('--init-deploy')) {
 
 // ---- 习惯提案合并（habits v3）----
 // agent 只写工作区的 .relic/habits-proposals.jsonl；由本进程（未沙箱）读提案并合并进
-// ~/.config/relic-habits/learned.yaml。必须在骨架门禁 B 之前——B 的 inputSig 含本机
+// ~/.relic/habits/learned.yaml。必须在骨架门禁 B 之前——B 的 inputSig 含本机
 // 习惯视图，本轮合并的新条目要在同一轮就参与渲染。
 let habitsMerge = null;
 if (!process.argv.includes('--no-habits')) {

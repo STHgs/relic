@@ -59,7 +59,7 @@ describe('P2: empty personas → section absent, mechanism remains', () => {
 
 describe('P3: mechanism skeleton directives (v2)', () => {
   const md = renderAgentsMd(base);
-  it('names the learned store path', () => assert.match(md, /~\/\.config\/relic-habits\/learned\.yaml/));
+  it('names the learned store path', () => assert.match(md, /~\/\.relic\/habits\/learned\.yaml/));
   it('binary self-check directive present', () => assert.match(md, /收尾二值自省/));
   it('event-driven write gate skips declared/derivable', () => assert.match(md, /助手人设未覆盖 ②环境推不出/));
   it('hits update directive (v3: hit event appended to workspace proposal)', () => assert.match(md, /"event":"hit"/));
@@ -115,6 +115,6 @@ describe('P4: gate interaction — persona is data, mechanism is skeleton', () =
   });
   it('mechanism lines are locked in golden (skeleton set)', () => {
     assert.ok(sk.some((l) => l.includes('学习与适应')));
-    assert.ok(sk.some((l) => l.includes('relic-habits/learned.yaml')));
+    assert.ok(sk.some((l) => l.includes('relic/habits/learned.yaml')));
   });
 });

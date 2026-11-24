@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname, posix } from 'path';
 import { userHome } from './exec.mjs';
+import { contentRepoDefault } from './relic-root.mjs';
 
 /**
  * 读内容库的 harness-paths.json（第 1 层显式声明）。
@@ -21,17 +22,7 @@ import { userHome } from './exec.mjs';
  */
 export function readDeclaredPaths(contentRepo, optsEnv = process.env) {
   try {
-    const repo = contentRepo
-      || (optsEnv.RELIC_CONTENT_REPO)
-      || (() => {
-        // 引擎侧 relic.config.json 的 contentRepo（同 sync 发现链，只读不引依赖）
-        for (const cfg of [join(process.cwd(), 'relic.config.json')]) {
-          if (existsSync(cfg)) {
-            try { return JSON.parse(readFileSync(cfg, 'utf8')).contentRepo; } catch { /* fallthrough */ }
-          }
-        }
-        return join(userHome(), '.config', 'relic-sync');
-      })();
+    const repo = contentRepo || contentRepoDefault(optsEnv);
     const p = join(repo, 'harness-paths.json');
     if (!existsSync(p)) return {};
     const raw = JSON.parse(readFileSync(p, 'utf8'));

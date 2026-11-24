@@ -20,10 +20,11 @@ import { createHash } from 'crypto';
 import { join } from 'path';
 import { userHome } from './exec.mjs';
 import { posix } from 'path';
+import { habitsDir } from './relic-root.mjs';
 
 const pj = posix.join;
 
-export const HABITS_DIR = () => pj(userHome(), '.config', 'relic-habits');
+export const HABITS_DIR = () => habitsDir();
 export const HABITS_FILE = () => pj(HABITS_DIR(), 'learned.yaml');
 
 // ─── 常量（用户拍板参数） ───────────────────────────────────────────────

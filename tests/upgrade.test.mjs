@@ -224,12 +224,14 @@ it('upgrade: HEAD move during sync refuses an incorrect engine.lock', async t =>
   assert.ok(!f.events.some(e => /升级完成/.test(e.message)));
 });
 
-it('upgrade: content discovery honors argument > env > config > home', t => {
+it('upgrade: content discovery honors argument > env > root config > home', t => {
   const root = mkdtempSync(join(tmpdir(), 'relic-discovery-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const base = { repo: root, env: {}, home: root };
-  assert.equal(discoverUpgradeContent(base), join(root, '.config', 'relic-sync'));
-  writeFileSync(join(root, 'relic.config.json'), JSON.stringify({ contentRepo: join(root, 'configured') }));
+  assert.equal(discoverUpgradeContent(base), join(root, '.relic', 'sync'));
+  const cfgDir = join(root, '.relic');
+  mkdirSync(cfgDir, { recursive: true });
+  writeFileSync(join(cfgDir, 'relic.config.json'), JSON.stringify({ contentRepo: join(root, 'configured') }));
   assert.equal(discoverUpgradeContent(base), join(root, 'configured'));
   assert.equal(discoverUpgradeContent({ ...base, env: { RELIC_CONTENT_REPO: join(root, 'env') } }), join(root, 'env'));
   assert.equal(discoverUpgradeContent({ ...base, env: { RELIC_CONTENT_REPO: join(root, 'env') }, content: join(root, 'explicit') }), join(root, 'explicit'));

@@ -11,6 +11,7 @@
 
 import { createInterface } from 'readline';
 import { listDeployed, uninject, reinject, deactivate, fullUninstall } from '../src/core/uninstall-core.mjs';
+import { ensureLayout } from '../src/core/migrate-layout.mjs';
 
 const argOf = (name) => {
   const i = process.argv.indexOf(name);
@@ -23,6 +24,13 @@ const ask = (q) => new Promise((res) => {
 });
 
 async function main() {
+  // 布局迁移（硬切 v0.0.4）：卸载前先收敛旧布局，避免漏删
+  const mig = ensureLayout();
+  if (!mig.ok) {
+    console.error('[uninstall] 目录迁移失败：' + (mig.reason || '未知错误'));
+    process.exit(1);
+  }
+
   // 恢复模式
   if (process.argv.includes('--reinject')) {
     console.log('[uninstall] 恢复去治理（从备份还原 AGENTS.md）...');
